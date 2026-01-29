@@ -1,0 +1,71 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Player {
+  id              String    @id @default(uuid())
+  sessionToken    String    @unique
+  firebaseUid     String?   @unique
+  rating          Float     @default(1500)
+  ratingDeviation Float     @default(350)
+  volatility      Float     @default(0.06)
+  gamesPlayed     Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  attempts        Attempt[]
+
+  @@index([sessionToken])
+  @@index([firebaseUid])
+  @@index([rating])
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum AnswerType {
+  FREE_RESPONSE
+  MULTIPLE_CHOICE
+}
+
+model Problem {
+  id              String     @id @default(uuid())
+  content         String     // Problem text (can include LaTeX)
+  answer          String     // Correct answer (letter for MC, value for FR)
+  answerType      AnswerType @default(FREE_RESPONSE)
+  choices         String[]   // MC choices: ["A. ...", "B. ...", ...] (empty for FR)
+  rating          Float      @default(1500)
+  ratingDeviation Float      @default(350)
+  volatility      Float      @default(0.06)
+  difficulty      Difficulty
+  createdAt       DateTime   @default(now())
+  attempts        Attempt[]
+
+  @@index([rating])
+  @@index([difficulty])
+}
+
+model Attempt {
+  id           String   @id @default(uuid())
+  playerId     String
+  problemId    String
+  answer       String   // Player's submitted answer
+  correct      Boolean
+  ratingBefore Float    // Player's rating before this attempt
+  ratingAfter  Float    // Player's rating after this attempt
+  createdAt    DateTime @default(now())
+
+  player  Player  @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+
+  @@index([playerId])
+  @@index([problemId])
+  @@index([createdAt])
+}
