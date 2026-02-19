@@ -1,71 +1,78 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
+import { TierIcon } from "./TierIcon";
 
-interface HeaderProps {
-  rating?: number;
-  showNav?: boolean;
-}
-
-export function Header({ rating, showNav = true }: HeaderProps) {
+export function Header() {
   const { user, loading, signInWithGoogle, signOut } = useFirebaseAuth();
+  const pathname = usePathname();
 
   return (
-    <header className="border-b border-[var(--border)] bg-[var(--background)]">
-      <div className="mx-auto max-w-3xl px-4 py-4 flex items-center justify-between">
-        <Link href="/" className="text-xl font-bold hover:opacity-80">
-          Math ELO
+    <div className="sticky top-3 z-50 flex justify-center px-4">
+      <nav
+        className="flex items-center gap-2 px-3 py-2 rounded-full border border-[var(--border)]/50 bg-[var(--background)]/80 backdrop-blur-lg shadow-lg"
+      >
+        {/* Logo */}
+        <Link
+          href="/"
+          className="flex items-center gap-2 px-4 py-1.5 rounded-full hover:bg-[var(--border)]/30 transition-colors"
+        >
+          <TierIcon tier="Octahedron" size={22} className="text-[var(--accent)]" />
+          <span className="text-base font-bold tracking-tight">MathELO</span>
         </Link>
 
-        <div className="flex items-center gap-4">
-          {rating !== undefined && (
-            <span className="text-sm font-medium text-[var(--muted)]">
-              Rating: <span className="text-[var(--foreground)]">{Math.round(rating)}</span>
-            </span>
-          )}
+        <div className="w-px h-5 bg-[var(--border)]/50 mx-1" />
 
-          {showNav && (
-            <nav className="flex gap-3">
-              <Link
-                href="/play"
-                className="text-sm font-medium text-[var(--accent)] hover:text-[var(--accent-hover)]"
-              >
-                Play
-              </Link>
-              <Link
-                href="/stats"
-                className="text-sm font-medium text-[var(--accent)] hover:text-[var(--accent-hover)]"
-              >
-                Stats
-              </Link>
-            </nav>
-          )}
+        {/* Nav links */}
+        <Link
+          href="/play"
+          className={`px-4 py-1.5 text-base font-medium rounded-full transition-colors ${
+            pathname === "/play"
+              ? "bg-[var(--accent)]/10 text-[var(--accent)]"
+              : "text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--border)]/30"
+          }`}
+        >
+          Play
+        </Link>
+        <Link
+          href="/stats"
+          className={`px-4 py-1.5 text-base font-medium rounded-full transition-colors ${
+            pathname === "/stats"
+              ? "bg-[var(--accent)]/10 text-[var(--accent)]"
+              : "text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--border)]/30"
+          }`}
+        >
+          Stats
+        </Link>
 
-          {!loading && (
-            user ? (
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-[var(--muted)]">
-                  {user.displayName || user.email}
-                </span>
-                <button
-                  onClick={signOut}
-                  className="text-sm font-medium text-[var(--accent)] hover:text-[var(--accent-hover)]"
-                >
-                  Sign Out
-                </button>
+        <div className="w-px h-5 bg-[var(--border)]/50 mx-1" />
+
+        {/* Auth */}
+        {!loading && (
+          user ? (
+            <button
+              onClick={signOut}
+              className="flex items-center gap-2 px-4 py-1.5 rounded-full text-base text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--border)]/30 transition-colors"
+            >
+              <div className="w-6 h-6 rounded-full bg-[var(--accent)]/20 flex items-center justify-center text-xs font-bold text-[var(--accent)]">
+                {(user.displayName?.[0] || user.email?.[0] || "?").toUpperCase()}
               </div>
-            ) : (
-              <button
-                onClick={signInWithGoogle}
-                className="text-sm font-medium text-[var(--accent)] hover:text-[var(--accent-hover)]"
-              >
-                Sign in with Google
-              </button>
-            )
-          )}
-        </div>
-      </div>
-    </header>
+              <span className="hidden sm:inline max-w-[100px] truncate">
+                {user.displayName || user.email}
+              </span>
+            </button>
+          ) : (
+            <button
+              onClick={signInWithGoogle}
+              className="px-4 py-1.5 rounded-full text-base font-medium text-[var(--accent)] hover:bg-[var(--accent)]/10 transition-colors"
+            >
+              Sign in
+            </button>
+          )
+        )}
+      </nav>
+    </div>
   );
 }

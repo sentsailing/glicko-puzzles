@@ -11,6 +11,8 @@
   --error: #dc2626;
   --muted: #6b7280;
   --border: #e5e7eb;
+  --card-bg: #fafafa;
+  --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -23,6 +25,8 @@
     --error: #ef4444;
     --muted: #9ca3af;
     --border: #374151;
+    --card-bg: #111111;
+    --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
   }
 }
 
@@ -30,6 +34,44 @@ body {
   color: var(--foreground);
   background: var(--background);
   font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* Problem content font (Computer Modern Sans via KaTeX) */
+.latex-content {
+  font-family: 'KaTeX_SansSerif', 'Computer Modern Sans', system-ui, sans-serif;
+  line-height: 1.5;
+}
+
+/* Normalize KaTeX rendered math to match surrounding text size, use sans-serif */
+.katex {
+  font-size: 1em !important;
+  font-family: 'KaTeX_SansSerif', system-ui, -apple-system, sans-serif !important;
+}
+
+.katex .mathnormal,
+.katex .mathit,
+.katex .mathrm,
+.katex .mathbf,
+.katex .mathbb,
+.katex .mathcal,
+.katex .mathfrak,
+.katex .mathtt,
+.katex .mathsf,
+.katex .mainrm {
+  font-family: 'KaTeX_SansSerif', system-ui, -apple-system, sans-serif !important;
+}
+
+/* SVG diagram container */
+.problem-diagram {
+  display: flex;
+  justify-content: center;
+  margin: 1rem 0;
+  padding: 0.5rem;
+}
+
+.problem-diagram svg {
+  max-width: 100%;
+  height: auto;
 }
 
 /* Rating badge colors */
@@ -43,4 +85,102 @@ body {
 
 .rating-hard {
   @apply bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200;
+}
+
+/* Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulseSubtle {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(37, 99, 235, 0.15);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.4s ease-out both;
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.4s ease-out both;
+}
+
+.animate-pulse-subtle {
+  animation: pulseSubtle 2s ease-in-out infinite;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+
+.animate-shake {
+  animation: shake 0.4s ease-out;
+}
+
+/* Stagger delays for children */
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.1s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.2s; }
+.stagger-5 { animation-delay: 0.25s; }
+
+/* Tier icon animations */
+@keyframes tierRock {
+  0%, 100% { transform: rotateY(-12deg); }
+  50% { transform: rotateY(12deg); }
+}
+
+@keyframes tierGlow {
+  0%, 100% { filter: drop-shadow(0 0 3px var(--tier-glow, currentColor)); }
+  50% { filter: drop-shadow(0 0 12px var(--tier-glow, currentColor)) drop-shadow(0 0 24px var(--tier-glow, currentColor)); }
+}
+
+.tier-icon-spin {
+  animation: tierRock 4s ease-in-out infinite;
+  transform-style: preserve-3d;
+}
+
+.tier-icon-glow {
+  animation: tierGlow 2s ease-in-out infinite;
+}
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in-up,
+  .animate-slide-in-right,
+  .animate-pulse-subtle,
+  .animate-shake,
+  .tier-icon-spin,
+  .tier-icon-glow {
+    animation: none;
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
 }

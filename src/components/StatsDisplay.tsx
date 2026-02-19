@@ -1,111 +1,295 @@
 "use client";
 
 import type { StatsResponse } from "@/types";
+import { getTier, getTierProgress, TIERS } from "@/lib/tiers";
+import { TierIcon } from "./TierIcon";
 
 interface StatsDisplayProps {
   stats: StatsResponse;
 }
 
-export function StatsDisplay({ stats }: StatsDisplayProps) {
-  const { player, accuracy, ratingHistory, recentAttempts } = stats;
+/** Format a timestamp as relative time (e.g. "2m ago"). */
+function timeAgo(timestamp: string): string {
+  const diff = Date.now() - new Date(timestamp).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+/** SVG line chart for rating history. */
+function RatingChart({ history }: { history: Array<{ rating: number; timestamp: string }> }) {
+  if (history.length < 2) return null;
+
+  const W = 600;
+  const H = 140;
+  const PAD_X = 8;
+  const PAD_Y = 12;
+
+  const ratings = history.map((h) => h.rating);
+  const min = Math.min(...ratings);
+  const max = Math.max(...ratings);
+  const padding = Math.max((max - min) * 0.1, 5);
+  const yMin = min - padding;
+  const yMax = max + padding;
+  const yRange = yMax - yMin;
+
+  const points = history.map((h, i) => ({
+    x: PAD_X + (i / (history.length - 1)) * (W - 2 * PAD_X),
+    y: H - PAD_Y - ((h.rating - yMin) / yRange) * (H - 2 * PAD_Y),
+  }));
+
+  const polyline = points.map((p) => `${p.x},${p.y}`).join(" ");
+
+  // Gradient fill below line
+  const fillPath = `M${points[0].x},${points[0].y} ${points.map((p) => `L${p.x},${p.y}`).join(" ")} L${points[points.length - 1].x},${H} L${points[0].x},${H} Z`;
 
   return (
-    <div className="space-y-8">
-      {/* Overview Cards */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="border border-[var(--border)] rounded-lg p-4 text-center">
-          <div className="text-3xl font-bold">{Math.round(player.rating)}</div>
-          <div className="text-sm text-[var(--muted)]">Current Rating</div>
-        </div>
-        <div className="border border-[var(--border)] rounded-lg p-4 text-center">
-          <div className="text-3xl font-bold">{player.gamesPlayed}</div>
-          <div className="text-sm text-[var(--muted)]">Problems Solved</div>
-        </div>
-        <div className="border border-[var(--border)] rounded-lg p-4 text-center">
-          <div className="text-3xl font-bold">{accuracy.percentage}%</div>
-          <div className="text-sm text-[var(--muted)]">Accuracy</div>
-        </div>
-      </div>
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: "140px" }} preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="var(--accent)" stopOpacity={0.2} />
+          <stop offset="100%" stopColor="var(--accent)" stopOpacity={0} />
+        </linearGradient>
+      </defs>
+      {/* Fill under line */}
+      <path d={fillPath} fill="url(#chartGrad)" />
+      {/* Line */}
+      <polyline
+        points={polyline}
+        fill="none"
+        stroke="var(--accent)"
+        strokeWidth="2"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+      {/* Last point highlight */}
+      <circle
+        cx={points[points.length - 1].x}
+        cy={points[points.length - 1].y}
+        r={4}
+        fill="var(--accent)"
+      />
+    </svg>
+  );
+}
 
-      {/* Accuracy Breakdown */}
-      <div className="border border-[var(--border)] rounded-lg p-4">
-        <h3 className="font-medium mb-3">Accuracy Breakdown</h3>
-        <div className="flex items-center gap-4">
-          <div className="flex-1 bg-[var(--border)] rounded-full h-4 overflow-hidden">
-            <div
-              className="bg-[var(--success)] h-full transition-all"
-              style={{ width: `${accuracy.percentage}%` }}
-            />
+export function StatsDisplay({ stats }: StatsDisplayProps) {
+  const { player, accuracy, ratingHistory, recentAttempts } = stats;
+  const tier = getTier(player.rating);
+  const progress = getTierProgress(player.rating);
+
+  // Compute best streak
+  let bestStreak = 0;
+  let currentStreak = 0;
+  for (const attempt of [...recentAttempts].reverse()) {
+    if (attempt.correct) {
+      currentStreak++;
+      bestStreak = Math.max(bestStreak, currentStreak);
+    } else {
+      currentStreak = 0;
+    }
+  }
+
+  return (
+    <div className="flex flex-col lg:flex-row gap-6">
+      {/* Left column: main stats */}
+      <div className="flex-1 min-w-0 space-y-6">
+        {/* Hero: Tier + Rating */}
+        <div
+          className={`rounded-xl border ${tier.border} ${tier.bg} p-6 sm:p-8 animate-fade-in-up`}
+          style={{ boxShadow: "var(--card-shadow)" }}
+        >
+          <div className="flex items-center gap-5">
+            <div className={`${tier.color} tier-icon-glow`} style={{ "--tier-glow": tier.hex } as React.CSSProperties}>
+              <TierIcon tier={tier.name} size={64} animate />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-baseline gap-3">
+                <span className="text-4xl sm:text-5xl font-bold tabular-nums">
+                  {Math.round(player.rating)}
+                </span>
+              </div>
+              <div className={`text-lg font-semibold mt-1 ${tier.color}`}>
+                {tier.name}
+              </div>
+              {/* Progress to next tier */}
+              <div className="mt-3 max-w-sm">
+                <div className="flex justify-between text-xs text-[var(--muted)] mb-1 tabular-nums">
+                  <span>{tier.threshold}</span>
+                  <span>{Math.round(progress)}% to {tier.nextThreshold}</span>
+                </div>
+                <div className="h-2 rounded-full bg-[var(--border)] overflow-hidden">
+                  <div
+                    className={`h-full rounded-full ${tier.barColor} transition-all duration-1000 ease-out`}
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="text-sm text-[var(--muted)] whitespace-nowrap">
-            {accuracy.correct} / {accuracy.total}
+        </div>
+
+        {/* Stat Cards */}
+        <div className="grid grid-cols-3 gap-4">
+          <div
+            className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-4 text-center animate-fade-in-up stagger-1"
+            style={{ boxShadow: "var(--card-shadow)" }}
+          >
+            <div className="text-3xl font-bold tabular-nums">{player.gamesPlayed}</div>
+            <div className="text-xs font-medium text-[var(--muted)] uppercase tracking-wider mt-1">
+              Solved
+            </div>
+          </div>
+          <div
+            className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-4 text-center animate-fade-in-up stagger-2"
+            style={{ boxShadow: "var(--card-shadow)" }}
+          >
+            <div className="text-3xl font-bold tabular-nums">{accuracy.percentage}%</div>
+            <div className="text-xs font-medium text-[var(--muted)] uppercase tracking-wider mt-1">
+              Accuracy
+            </div>
+            <div className="mt-2 h-1 rounded-full bg-[var(--border)] overflow-hidden">
+              <div
+                className="h-full rounded-full bg-[var(--success)] transition-all duration-700"
+                style={{ width: `${accuracy.percentage}%` }}
+              />
+            </div>
+          </div>
+          <div
+            className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-4 text-center animate-fade-in-up stagger-3"
+            style={{ boxShadow: "var(--card-shadow)" }}
+          >
+            <div className="text-3xl font-bold tabular-nums">{bestStreak}</div>
+            <div className="text-xs font-medium text-[var(--muted)] uppercase tracking-wider mt-1">
+              Best Streak
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Rating History */}
-      {ratingHistory.length > 0 && (
-        <div className="border border-[var(--border)] rounded-lg p-4">
-          <h3 className="font-medium mb-3">Rating History</h3>
-          <div className="h-32 flex items-end gap-1">
-            {ratingHistory.slice(-20).map((point, i) => {
-              const min = Math.min(...ratingHistory.map((p) => p.rating));
-              const max = Math.max(...ratingHistory.map((p) => p.rating));
-              const range = max - min || 1;
-              const height = ((point.rating - min) / range) * 100;
+        {/* Rating History Chart */}
+        {ratingHistory.length > 1 && (
+          <div
+            className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-4 sm:p-5 animate-fade-in-up stagger-4"
+            style={{ boxShadow: "var(--card-shadow)" }}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-xs font-medium text-[var(--muted)] uppercase tracking-wider">
+                Rating History
+              </div>
+              <div className="text-xs text-[var(--muted)] tabular-nums">
+                {ratingHistory.length} games
+              </div>
+            </div>
+            <RatingChart history={ratingHistory} />
+            <div className="flex justify-between text-[10px] text-[var(--muted)] mt-1 tabular-nums">
+              <span>{Math.round(Math.min(...ratingHistory.map((h) => h.rating)))}</span>
+              <span>{Math.round(Math.max(...ratingHistory.map((h) => h.rating)))}</span>
+            </div>
+          </div>
+        )}
 
-              return (
+        {/* Recent Attempts */}
+        {recentAttempts.length > 0 && (
+          <div
+            className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-4 sm:p-5 animate-fade-in-up stagger-5"
+            style={{ boxShadow: "var(--card-shadow)" }}
+          >
+            <div className="text-xs font-medium text-[var(--muted)] uppercase tracking-wider mb-3">
+              Recent Attempts
+            </div>
+            <div className="space-y-0">
+              {recentAttempts.map((attempt, i) => (
                 <div
                   key={i}
-                  className="flex-1 bg-[var(--accent)] rounded-t min-w-1"
-                  style={{ height: `${Math.max(10, height)}%` }}
-                  title={`Rating: ${Math.round(point.rating)}`}
-                />
+                  className="flex items-center gap-3 py-2.5 border-b border-[var(--border)]/50 last:border-0"
+                >
+                  {/* Correct/incorrect arrow */}
+                  <span
+                    className={`text-sm font-bold flex-shrink-0 ${
+                      attempt.correct ? "text-[var(--success)]" : "text-[var(--error)]"
+                    }`}
+                  >
+                    {attempt.correct ? "\u25B2" : "\u25BC"}
+                  </span>
+                  {/* Problem ID */}
+                  <span className="text-sm truncate flex-1 min-w-0 text-[var(--foreground)]">
+                    {attempt.source && attempt.sourceNumber
+                      ? `${attempt.source} #${attempt.sourceNumber}`
+                      : attempt.problemContent.replace(/\$[^$]*\$/g, "[math]").slice(0, 60)}
+                  </span>
+                  {/* Rating change */}
+                  <span
+                    className={`text-sm font-bold tabular-nums flex-shrink-0 ${
+                      attempt.ratingChange >= 0
+                        ? "text-[var(--success)]"
+                        : "text-[var(--error)]"
+                    }`}
+                  >
+                    {attempt.ratingChange >= 0 ? "+" : ""}
+                    {Math.round(attempt.ratingChange)}
+                  </span>
+                  {/* Time ago */}
+                  <span className="text-[10px] text-[var(--muted)] flex-shrink-0 w-12 text-right">
+                    {timeAgo(attempt.timestamp)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Right column: ELO Brackets */}
+      <div className="lg:w-64 flex-shrink-0">
+        <div
+          className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-4 sm:p-5 animate-slide-in-right sticky top-20"
+          style={{ boxShadow: "var(--card-shadow)" }}
+        >
+          <div className="text-xs font-medium text-[var(--muted)] uppercase tracking-wider mb-4">
+            ELO Brackets
+          </div>
+          <div className="space-y-1.5">
+            {[...TIERS].reverse().map((t) => {
+              const isCurrent = t.name === tier.name;
+              return (
+                <div
+                  key={t.name}
+                  className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-all duration-300 ${
+                    isCurrent
+                      ? `${t.bg} ${t.border} border`
+                      : "hover:bg-[var(--border)]/20"
+                  }`}
+                >
+                  <div className={`${t.color} flex-shrink-0 tier-icon-glow`} style={{ "--tier-glow": t.hex } as React.CSSProperties}>
+                    <TierIcon
+                      tier={t.name}
+                      size={isCurrent ? 22 : 18}
+                      animate={isCurrent}
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className={`text-xs font-semibold truncate ${isCurrent ? t.color : "text-[var(--foreground)]"}`}>
+                      {t.name}
+                    </div>
+                    <div className="text-[10px] text-[var(--muted)] tabular-nums">
+                      {t.threshold}+
+                    </div>
+                  </div>
+                  {isCurrent && (
+                    <div className={`text-[10px] font-bold ${t.color}`}>
+                      YOU
+                    </div>
+                  )}
+                </div>
               );
             })}
           </div>
-          <div className="flex justify-between text-xs text-[var(--muted)] mt-2">
-            <span>Oldest</span>
-            <span>Most Recent</span>
-          </div>
         </div>
-      )}
-
-      {/* Recent Attempts */}
-      {recentAttempts.length > 0 && (
-        <div className="border border-[var(--border)] rounded-lg p-4">
-          <h3 className="font-medium mb-3">Recent Attempts</h3>
-          <div className="space-y-2">
-            {recentAttempts.map((attempt, i) => (
-              <div
-                key={i}
-                className="flex items-center justify-between py-2 border-b border-[var(--border)] last:border-0"
-              >
-                <div className="flex items-center gap-3">
-                  <span
-                    className={`w-2 h-2 rounded-full ${
-                      attempt.correct ? "bg-[var(--success)]" : "bg-[var(--error)]"
-                    }`}
-                  />
-                  <span className="text-sm truncate max-w-xs">
-                    {attempt.problemContent}
-                  </span>
-                </div>
-                <span
-                  className={`text-sm font-medium ${
-                    attempt.ratingChange >= 0
-                      ? "text-[var(--success)]"
-                      : "text-[var(--error)]"
-                  }`}
-                >
-                  {attempt.ratingChange >= 0 ? "+" : ""}
-                  {Math.round(attempt.ratingChange)}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      </div>
     </div>
   );
 }

@@ -2,37 +2,27 @@
 
 import { LatexContent } from "./LatexContent";
 
-type Difficulty = "EASY" | "MEDIUM" | "HARD";
-
 interface ProblemProps {
   content: string;
-  difficulty: Difficulty;
+  source?: string | null;
+  sourceNumber?: number | null;
 }
 
-const difficultyStyles: Record<Difficulty, string> = {
-  EASY: "rating-easy",
-  MEDIUM: "rating-medium",
-  HARD: "rating-hard",
-};
+export function Problem({ content, source, sourceNumber }: ProblemProps) {
+  const sourceLabel =
+    source && sourceNumber ? `${source} #${sourceNumber}` : source || null;
 
-const difficultyLabels: Record<Difficulty, string> = {
-  EASY: "Easy",
-  MEDIUM: "Medium",
-  HARD: "Hard",
-};
-
-export function Problem({ content, difficulty }: ProblemProps) {
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <span
-          className={`px-2 py-1 text-xs font-medium rounded ${difficultyStyles[difficulty]}`}
-        >
-          {difficultyLabels[difficulty]}
-        </span>
-      </div>
+      {sourceLabel && (
+        <div>
+          <span className="px-2 py-1 text-xs font-medium rounded bg-[var(--border)]/50 text-[var(--muted)]">
+            {sourceLabel}
+          </span>
+        </div>
+      )}
 
-      <div className="text-2xl font-medium leading-relaxed">
+      <div className="text-2xl font-medium leading-normal">
         <LatexContent content={content} />
       </div>
     </div>

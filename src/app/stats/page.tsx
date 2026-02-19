@@ -42,7 +42,7 @@ export default function StatsPage() {
   if (sessionLoading) {
     return (
       <main className="min-h-screen flex flex-col">
-        <Header showNav={false} />
+        <Header />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-[var(--muted)]">Loading session...</div>
         </div>
@@ -52,20 +52,10 @@ export default function StatsPage() {
 
   return (
     <main className="min-h-screen flex flex-col">
-      <Header rating={player?.rating} />
+      <Header />
 
       <div className="flex-1 px-4 py-8">
-        <div className="mx-auto max-w-2xl">
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl font-bold">Your Statistics</h1>
-            <Link
-              href="/play"
-              className="px-4 py-2 bg-[var(--accent)] text-white text-sm font-medium rounded-lg hover:bg-[var(--accent-hover)]"
-            >
-              Play Now
-            </Link>
-          </div>
-
+        <div className="mx-auto max-w-5xl">
           {loading ? (
             <div className="text-center py-12 text-[var(--muted)]">
               Loading stats...

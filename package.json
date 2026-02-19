@@ -11,7 +11,8 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "scrape": "tsx scripts/scrape-aops.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.19.0",
@@ -22,6 +23,9 @@
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "react-katex": "^3.1.0"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   },
   "devDependencies": {
     "@types/katex": "^0.16.8",

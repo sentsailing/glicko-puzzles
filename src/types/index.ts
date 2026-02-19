@@ -24,6 +24,8 @@ export interface Problem {
   rating: number;
   ratingDeviation: number;
   difficulty: Difficulty;
+  source: string | null;
+  sourceNumber: number | null;
   createdAt: Date;
 }
 
@@ -61,6 +63,9 @@ export interface ProblemResponse {
   difficulty: Difficulty;
   answerType: AnswerType;
   choices: string[]; // empty for FREE_RESPONSE
+  source: string | null;
+  sourceNumber: number | null;
+  problemRating: number;
   // Note: answer is NOT included (hidden from client)
 }
 
@@ -97,6 +102,8 @@ export interface StatsResponse {
   }>;
   recentAttempts: Array<{
     problemContent: string;
+    source: string | null;
+    sourceNumber: number | null;
     correct: boolean;
     ratingChange: number;
     timestamp: string;

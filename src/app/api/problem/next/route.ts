@@ -45,6 +45,9 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
         difficulty: problem.difficulty,
         answerType: problem.answerType,
         choices: problem.choices,
+        source: problem.source ?? null,
+        sourceNumber: problem.sourceNumber ?? null,
+        problemRating: problem.rating,
       },
     });
   } catch (error) {

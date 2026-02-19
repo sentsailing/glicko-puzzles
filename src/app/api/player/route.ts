@@ -31,14 +31,15 @@ export async function GET(
     }
 
     // If there was an explicit auth error (e.g. invalid Firebase token), return 401
-    if (error) {
+    // But NOT for stale session tokens — those should fall through to create a new player
+    if (error && error !== "Player not found") {
       return NextResponse.json(
         { success: false, error },
         { status: 401 }
       );
     }
 
-    // No auth headers at all — create a new anonymous player
+    // No valid session found — create a new anonymous player
     const newSessionToken = crypto.randomUUID();
     const defaultRating = ratingSystem.getDefaultRating();
     const defaultRD = ratingSystem.getDefaultRD();

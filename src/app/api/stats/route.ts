@@ -29,7 +29,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
           take: 50,
           include: {
             problem: {
-              select: { content: true },
+              select: { content: true, source: true, sourceNumber: true },
             },
           },
         },
@@ -60,13 +60,15 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
 
     // Recent attempts (last 10)
     const recentAttempts = player.attempts.slice(0, 10).map((attempt: {
-      problem: { content: string };
+      problem: { content: string; source: string | null; sourceNumber: number | null };
       correct: boolean;
       ratingAfter: number;
       ratingBefore: number;
       createdAt: Date;
     }) => ({
       problemContent: attempt.problem.content,
+      source: attempt.problem.source,
+      sourceNumber: attempt.problem.sourceNumber,
       correct: attempt.correct,
       ratingChange: attempt.ratingAfter - attempt.ratingBefore,
       timestamp: attempt.createdAt.toISOString(),

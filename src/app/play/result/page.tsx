@@ -30,7 +30,7 @@ export default function ResultPage() {
   if (sessionLoading || !attempt) {
     return (
       <main className="min-h-screen flex flex-col">
-        <Header showNav={false} />
+        <Header />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-[var(--muted)]">Loading...</div>
         </div>
@@ -40,7 +40,7 @@ export default function ResultPage() {
 
   return (
     <main className="min-h-screen flex flex-col">
-      <Header rating={player?.rating} />
+      <Header />
 
       <div className="flex-1 flex items-center justify-center px-4 py-8">
         <div className="w-full max-w-lg space-y-6">

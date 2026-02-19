@@ -18,6 +18,7 @@ model Player {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   attempts        Attempt[]
+  reports         Report[]
 
   @@index([sessionToken])
   @@index([firebaseUid])
@@ -45,9 +46,13 @@ model Problem {
   ratingDeviation Float      @default(350)
   volatility      Float      @default(0.06)
   difficulty      Difficulty
+  source          String?    // e.g. "2024 AMC 8", "2024 AIME I"
+  sourceNumber    Int?       // Problem number (1-25 or 1-15)
   createdAt       DateTime   @default(now())
   attempts        Attempt[]
+  reports         Report[]
 
+  @@unique([source, sourceNumber])
   @@index([rating])
   @@index([difficulty])
 }
@@ -68,4 +73,24 @@ model Attempt {
   @@index([playerId])
   @@index([problemId])
   @@index([createdAt])
+}
+
+enum ReportType {
+  FORMATTING
+  WRONG_ANSWER
+  OTHER
+}
+
+model Report {
+  id        String     @id @default(uuid())
+  problemId String
+  playerId  String?
+  type      ReportType
+  details   String?
+  createdAt DateTime   @default(now())
+
+  problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+  player  Player? @relation(fields: [playerId], references: [id], onDelete: SetNull)
+
+  @@index([problemId])
 }

@@ -5,9 +5,10 @@ import { useState, FormEvent } from "react";
 interface AnswerFormProps {
   onSubmit: (answer: string) => Promise<void>;
   disabled?: boolean;
+  submitLabel?: string;
 }
 
-export function AnswerForm({ onSubmit, disabled = false }: AnswerFormProps) {
+export function AnswerForm({ onSubmit, disabled = false, submitLabel = "Submit Answer" }: AnswerFormProps) {
   const [answer, setAnswer] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -20,6 +21,7 @@ export function AnswerForm({ onSubmit, disabled = false }: AnswerFormProps) {
       await onSubmit(answer.trim());
     } finally {
       setSubmitting(false);
+      setAnswer("");
     }
   };
 
@@ -47,7 +49,7 @@ export function AnswerForm({ onSubmit, disabled = false }: AnswerFormProps) {
         disabled={!answer.trim() || disabled || submitting}
         className="w-full py-3 px-6 bg-[var(--accent)] text-white font-medium rounded-lg hover:bg-[var(--accent-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {submitting ? "Submitting..." : "Submit Answer"}
+        {submitting ? "Submitting..." : submitLabel}
       </button>
     </form>
   );
