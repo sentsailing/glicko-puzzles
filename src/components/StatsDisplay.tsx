@@ -136,23 +136,33 @@ export function StatsDisplay({ stats }: StatsDisplayProps) {
         {/* Stat Cards */}
         <div className="grid grid-cols-3 gap-4">
           <div
-            className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-4 text-center animate-fade-in-up stagger-1"
+            className="rounded-xl border border-[var(--accent)]/20 bg-[var(--accent)]/5 p-4 animate-fade-in-up stagger-1"
             style={{ boxShadow: "var(--card-shadow)" }}
           >
-            <div className="text-3xl font-bold tabular-nums">{player.gamesPlayed}</div>
-            <div className="text-xs font-medium text-[var(--muted)] uppercase tracking-wider mt-1">
-              Solved
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-8 h-8 rounded-lg bg-[var(--accent)]/15 flex items-center justify-center">
+                <svg className="w-4 h-4 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+              </div>
+              <div className="text-xs font-medium text-[var(--muted)] uppercase tracking-wider">
+                Solved
+              </div>
             </div>
+            <div className="text-3xl font-bold tabular-nums">{player.gamesPlayed}</div>
           </div>
           <div
-            className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-4 text-center animate-fade-in-up stagger-2"
+            className="rounded-xl border border-[var(--success)]/20 bg-[var(--success)]/5 p-4 animate-fade-in-up stagger-2"
             style={{ boxShadow: "var(--card-shadow)" }}
           >
-            <div className="text-3xl font-bold tabular-nums">{accuracy.percentage}%</div>
-            <div className="text-xs font-medium text-[var(--muted)] uppercase tracking-wider mt-1">
-              Accuracy
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-8 h-8 rounded-lg bg-[var(--success)]/15 flex items-center justify-center">
+                <svg className="w-4 h-4 text-[var(--success)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" fill="currentColor" /></svg>
+              </div>
+              <div className="text-xs font-medium text-[var(--muted)] uppercase tracking-wider">
+                Accuracy
+              </div>
             </div>
-            <div className="mt-2 h-1 rounded-full bg-[var(--border)] overflow-hidden">
+            <div className="text-3xl font-bold tabular-nums">{accuracy.percentage}%</div>
+            <div className="mt-2 h-1.5 rounded-full bg-[var(--border)] overflow-hidden">
               <div
                 className="h-full rounded-full bg-[var(--success)] transition-all duration-700"
                 style={{ width: `${accuracy.percentage}%` }}
@@ -160,13 +170,18 @@ export function StatsDisplay({ stats }: StatsDisplayProps) {
             </div>
           </div>
           <div
-            className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-4 text-center animate-fade-in-up stagger-3"
+            className="rounded-xl border border-orange-500/20 bg-orange-500/5 p-4 animate-fade-in-up stagger-3"
             style={{ boxShadow: "var(--card-shadow)" }}
           >
-            <div className="text-3xl font-bold tabular-nums">{bestStreak}</div>
-            <div className="text-xs font-medium text-[var(--muted)] uppercase tracking-wider mt-1">
-              Best Streak
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-8 h-8 rounded-lg bg-orange-500/15 flex items-center justify-center">
+                <svg className="w-4 h-4 text-orange-500" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></svg>
+              </div>
+              <div className="text-xs font-medium text-[var(--muted)] uppercase tracking-wider">
+                Best Streak
+              </div>
             </div>
+            <div className="text-3xl font-bold tabular-nums">{bestStreak}</div>
           </div>
         </div>
 

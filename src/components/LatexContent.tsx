@@ -98,10 +98,17 @@ function processLatex(input: string): string {
   return result;
 }
 
+/** Safe HTML tags allowed in problem content (formatting only). */
+const SAFE_TAG_RE = /^<\/?(u|i|b|em|strong|sup|sub)(\s[^>]*)?>$/i;
+
 function escapeHtml(text: string): string {
+  // Preserve safe formatting tags, escape everything else.
+  // First handle ampersands and quotes, then process tags individually.
   return text
     .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+    .replace(/"/g, "&quot;")
+    .replace(/<[^>]*>/g, (tag) => {
+      if (SAFE_TAG_RE.test(tag)) return tag;
+      return tag.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    });
 }

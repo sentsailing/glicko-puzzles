@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { resolvePlayer } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/rate-limit";
 import type { ApiResponse, StatsResponse } from "@/types";
 
 /**
@@ -11,6 +12,9 @@ import type { ApiResponse, StatsResponse } from "@/types";
  */
 export async function GET(request: NextRequest): Promise<NextResponse<ApiResponse<StatsResponse>>> {
   try {
+    const rateLimited = checkRateLimit(request, { limit: 20 });
+    if (rateLimited) return rateLimited;
+
     const { player: resolvedPlayer, error: authError } = await resolvePlayer(request);
 
     if (!resolvedPlayer) {

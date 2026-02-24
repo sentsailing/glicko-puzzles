@@ -5,58 +5,89 @@ import type { Problem } from "@/types";
  * Problem Selection Logic
  *
  * Selects the next problem for a player based on their rating.
- * Strategy: Find problems closest to player's rating, excluding
- * recently attempted problems.
+ * Strategy: Never repeat a problem until all have been attempted,
+ * then fall back to least-recently-attempted problems.
  */
 
 interface SelectProblemOptions {
   playerId: string;
   playerRating: number;
-  excludeRecentCount?: number; // Exclude N most recent attempts
 }
 
 /**
  * Select the next problem for a player
  *
  * Algorithm:
- * 1. Get recently attempted problem IDs (to avoid repetition)
- * 2. Find all eligible problems (not recently attempted)
- * 3. Sort by closest rating to player
- * 4. Return the best match
+ * 1. Get ALL distinct problem IDs the player has ever attempted
+ * 2. Find problems NOT in that set, pick closest to player's rating
+ * 3. If all exhausted: LRU fallback — pick from 20 least-recently-attempted,
+ *    then choose closest-rated among those
  */
 export async function selectNextProblem(
   options: SelectProblemOptions
 ): Promise<Problem | null> {
-  const { playerId, playerRating, excludeRecentCount = 5 } = options;
+  const { playerId, playerRating } = options;
 
-  // Get recently attempted problem IDs
-  const recentAttempts = await prisma.attempt.findMany({
+  // Step 1: Get all distinct problem IDs this player has ever attempted
+  const attemptedRaw = await prisma.attempt.findMany({
     where: { playerId },
-    orderBy: { createdAt: "desc" },
-    take: excludeRecentCount,
+    distinct: ["problemId"],
     select: { problemId: true },
   });
+  const attemptedIds = attemptedRaw.map((a: { problemId: string }) => a.problemId);
 
-  const excludedIds = recentAttempts.map((a: { problemId: string }) => a.problemId);
-
-  // Find all eligible problems
-  const problems = await prisma.problem.findMany({
+  // Step 2: Find problems NOT yet attempted, excluding broken ones
+  // Broken = empty content, unreferenced wiki images, missing diagrams/tables/charts
+  const excludeFilter = {
+    AND: [
+      { NOT: { content: "" } },
+      { NOT: { content: { contains: "[Diagram not available]" } } },
+      { NOT: { content: { contains: "Image:" } } },
+      // Shared-context problems missing their table/chart/diagram
+      { NOT: { content: { contains: "European stamps were issued in the" } } },
+      { NOT: { content: { contains: "South American stamps issued before" } } },
+      { NOT: { content: { contains: "average price of his '70s stamps" } } },
+      { NOT: { content: { contains: "batch of Trisha's cookies" } } },
+      { NOT: { content: { contains: "area of the small kite" } } },
+      // Problems referencing a missing expression or figure
+      { NOT: { content: { endsWith: "value of the expression:" } } },
+      { NOT: { content: { endsWith: "value of the following expression?" } } },
+    ],
+  };
+  const unattempted = await prisma.problem.findMany({
     where: {
-      id: { notIn: excludedIds.length > 0 ? excludedIds : undefined },
+      ...excludeFilter,
+      ...(attemptedIds.length > 0 ? { id: { notIn: attemptedIds } } : {}),
     },
   });
 
-  if (problems.length === 0) {
-    // If all problems have been recently attempted, allow any problem
-    const allProblems = await prisma.problem.findMany();
-    if (allProblems.length === 0) return null;
-
-    // Sort by closest rating
-    return sortByClosestRating(allProblems, playerRating)[0];
+  if (unattempted.length > 0) {
+    return sortByClosestRating(unattempted, playerRating)[0];
   }
 
-  // Sort by closest rating and return the best match
-  return sortByClosestRating(problems, playerRating)[0];
+  // Step 3: All problems attempted — LRU fallback
+  // Find the 20 problems whose most recent attempt is the oldest
+  const lruResult = await prisma.$queryRaw<Array<{ problemId: string }>>`
+    SELECT "problemId"
+    FROM "Attempt"
+    WHERE "playerId" = ${playerId}
+    GROUP BY "problemId"
+    ORDER BY MAX("createdAt") ASC
+    LIMIT 20
+  `;
+
+  if (lruResult.length === 0) {
+    // No attempts at all — shouldn't reach here, but safety fallback
+    const all = await prisma.problem.findMany({ where: excludeFilter });
+    return all.length > 0 ? sortByClosestRating(all, playerRating)[0] : null;
+  }
+
+  const lruProblemIds = lruResult.map((r) => r.problemId);
+  const lruProblems = await prisma.problem.findMany({
+    where: { id: { in: lruProblemIds }, ...excludeFilter },
+  });
+
+  return sortByClosestRating(lruProblems, playerRating)[0] ?? null;
 }
 
 /**

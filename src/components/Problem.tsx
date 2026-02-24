@@ -6,9 +6,11 @@ interface ProblemProps {
   content: string;
   source?: string | null;
   sourceNumber?: number | null;
+  /** Whether text is selectable/copyable. Defaults to true. */
+  selectable?: boolean;
 }
 
-export function Problem({ content, source, sourceNumber }: ProblemProps) {
+export function Problem({ content, source, sourceNumber, selectable = true }: ProblemProps) {
   const sourceLabel =
     source && sourceNumber ? `${source} #${sourceNumber}` : source || null;
 
@@ -22,7 +24,7 @@ export function Problem({ content, source, sourceNumber }: ProblemProps) {
         </div>
       )}
 
-      <div className="text-2xl font-medium leading-normal">
+      <div className={`text-2xl font-medium leading-normal ${selectable ? "" : "select-none"}`}>
         <LatexContent content={content} />
       </div>
     </div>

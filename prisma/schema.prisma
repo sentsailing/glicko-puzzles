@@ -11,18 +11,20 @@ model Player {
   id              String    @id @default(uuid())
   sessionToken    String    @unique
   firebaseUid     String?   @unique
-  rating          Float     @default(1500)
+  rating          Float     @default(1200)
   ratingDeviation Float     @default(350)
   volatility      Float     @default(0.06)
   gamesPlayed     Int       @default(0)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+  lastActiveAt    DateTime  @default(now())
   attempts        Attempt[]
   reports         Report[]
 
   @@index([sessionToken])
   @@index([firebaseUid])
   @@index([rating])
+  @@index([lastActiveAt])
 }
 
 enum Difficulty {
@@ -73,6 +75,7 @@ model Attempt {
   @@index([playerId])
   @@index([problemId])
   @@index([createdAt])
+  @@index([playerId, createdAt])
 }
 
 enum ReportType {

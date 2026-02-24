@@ -47,9 +47,18 @@ export function AnswerForm({ onSubmit, disabled = false, submitLabel = "Submit A
       <button
         type="submit"
         disabled={!answer.trim() || disabled || submitting}
-        className="w-full py-3 px-6 bg-[var(--accent)] text-white font-medium rounded-lg hover:bg-[var(--accent-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full py-3 px-6 bg-[var(--accent)] text-white font-medium rounded-lg hover:bg-[var(--accent-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
       >
-        {submitting ? "Submitting..." : submitLabel}
+        {submitting ? "Submitting..." : (
+          <>
+            {submitLabel === "Try Again" ? (
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+            )}
+            {submitLabel}
+          </>
+        )}
       </button>
     </form>
   );

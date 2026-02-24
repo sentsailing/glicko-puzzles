@@ -28,7 +28,7 @@ export class GlickoRatingSystem implements RatingSystem {
     defaultVolatility?: number;
     tau?: number;
   }) {
-    this.defaultRating = options?.defaultRating ?? 1500;
+    this.defaultRating = options?.defaultRating ?? 1200;
     this.defaultRD = options?.defaultRD ?? 350;
     this.defaultVolatility = options?.defaultVolatility ?? 0.06;
     // τ constrains volatility change. Smaller = more stable. Range: 0.3–1.2

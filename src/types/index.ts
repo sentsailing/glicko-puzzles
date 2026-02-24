@@ -13,6 +13,7 @@ export interface Player {
   gamesPlayed: number;
   createdAt: Date;
   updatedAt: Date;
+  lastActiveAt: Date;
 }
 
 export interface Problem {

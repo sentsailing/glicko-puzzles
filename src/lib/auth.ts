@@ -45,6 +45,12 @@ export async function resolvePlayer(
         });
       }
 
+      // Update lastActiveAt (fire-and-forget)
+      prisma.player.update({
+        where: { id: player.id },
+        data: { lastActiveAt: new Date() },
+      }).catch(() => {});
+
       return { player };
     } catch (err) {
       console.error("Firebase token verification failed:", err);
@@ -59,6 +65,11 @@ export async function resolvePlayer(
       where: { sessionToken },
     });
     if (player) {
+      // Update lastActiveAt (fire-and-forget)
+      prisma.player.update({
+        where: { id: player.id },
+        data: { lastActiveAt: new Date() },
+      }).catch(() => {});
       return { player };
     }
     return { player: null, error: "Player not found" };

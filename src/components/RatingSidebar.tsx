@@ -210,24 +210,9 @@ export function RatingSidebar({
         </div>
       </div>
 
-      {/* Problem Rating Card */}
-      {problemRating != null && (
-        <div
-          className="flex-1 rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-4 animate-slide-in-right stagger-2"
-          style={{ boxShadow: "var(--card-shadow)" }}
-        >
-          <div className="text-xs font-medium text-[var(--muted)] uppercase tracking-wider mb-2">
-            Problem Rating
-          </div>
-          <div className="text-3xl font-bold tabular-nums">
-            {Math.round(problemRating)}
-          </div>
-        </div>
-      )}
-
       {/* Session History Card */}
       <div
-        className="flex-1 rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-4 animate-slide-in-right stagger-3"
+        className="flex-1 rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-4 animate-slide-in-right stagger-2"
         style={{ boxShadow: "var(--card-shadow)" }}
       >
         <div className="flex items-center justify-between mb-2">
@@ -261,27 +246,45 @@ export function RatingSidebar({
         )}
       </div>
 
-      {/* AoPS Solution Link Card */}
-      {aopsUrl && (
-        <a
-          href={aopsUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex-1 rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-4 animate-fade-in-up hover:border-[var(--accent)]/50 hover:shadow-sm transition-all duration-200 group"
+      {/* Problem Detail Card */}
+      {problemRating != null && (
+        <div
+          className="flex-1 rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-4 animate-slide-in-right stagger-3"
           style={{ boxShadow: "var(--card-shadow)" }}
         >
           <div className="text-xs font-medium text-[var(--muted)] uppercase tracking-wider mb-2">
-            Solution
+            Problem Detail
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-[var(--accent)] group-hover:text-[var(--accent-hover)] transition-colors">
-              View on AoPS
+          <div className="flex items-baseline gap-2 mb-1">
+            <span className="text-xs text-[var(--muted)]">ELO</span>
+            <span className="text-2xl font-bold tabular-nums">
+              {Math.round(problemRating)}
             </span>
-            <svg className="w-4 h-4 text-[var(--accent)] group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-            </svg>
           </div>
-        </a>
+          {/* Source tag + AoPS link — only after submission */}
+          {source && sourceNumber && (
+            <div className="mt-3 pt-3 border-t border-[var(--border)]/50 space-y-3">
+              <div>
+                <span className="px-2 py-1 text-xs font-medium rounded bg-[var(--border)]/50 text-[var(--muted)]">
+                  {source} #{sourceNumber}
+                </span>
+              </div>
+              {aopsUrl && (
+                <a
+                  href={aopsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-lg bg-[var(--accent)] text-white font-medium hover:bg-[var(--accent-hover)] hover:scale-[1.01] transition-all duration-200"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                  View solution
+                </a>
+              )}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

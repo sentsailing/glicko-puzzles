@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { selectNextProblem } from "@/lib/problems";
 import { resolvePlayer } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/rate-limit";
 import type { ApiResponse, ProblemResponse } from "@/types";
 
 /**
@@ -11,6 +12,9 @@ import type { ApiResponse, ProblemResponse } from "@/types";
  */
 export async function GET(request: NextRequest): Promise<NextResponse<ApiResponse<ProblemResponse>>> {
   try {
+    const rateLimited = checkRateLimit(request, { limit: 30 });
+    if (rateLimited) return rateLimited;
+
     const { player, error: authError } = await resolvePlayer(request);
 
     if (!player) {

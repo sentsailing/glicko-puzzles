@@ -3,7 +3,10 @@ import { prisma } from "@/lib/db";
 import { ratingSystem } from "@/lib/rating";
 import { checkAnswer } from "@/lib/problems";
 import { resolvePlayer } from "@/lib/auth";
-import type { ApiResponse, AttemptRequest, AttemptResponse } from "@/types";
+import { checkRateLimit } from "@/lib/rate-limit";
+import type { ApiResponse, AttemptResponse } from "@/types";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * POST /api/attempt
@@ -13,6 +16,9 @@ import type { ApiResponse, AttemptRequest, AttemptResponse } from "@/types";
  */
 export async function POST(request: NextRequest): Promise<NextResponse<ApiResponse<AttemptResponse>>> {
   try {
+    const rateLimited = checkRateLimit(request, { limit: 30 });
+    if (rateLimited) return rateLimited;
+
     const { player, error: authError } = await resolvePlayer(request);
 
     if (!player) {
@@ -22,16 +28,20 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       );
     }
 
-    // Parse request body
-    const body: AttemptRequest = await request.json();
+    // Parse and validate request body
+    const body = await request.json();
     const { problemId, answer } = body;
 
-    if (!problemId || answer === undefined) {
+    if (!problemId || typeof problemId !== "string" || !UUID_RE.test(problemId)) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "problemId and answer are required",
-        },
+        { success: false, error: "Valid problemId is required" },
+        { status: 400 }
+      );
+    }
+
+    if (answer === undefined || answer === null || typeof answer !== "string" || answer.length > 100) {
+      return NextResponse.json(
+        { success: false, error: "answer is required and must be a string (max 100 chars)" },
         { status: 400 }
       );
     }

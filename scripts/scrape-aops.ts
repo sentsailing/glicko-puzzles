@@ -34,7 +34,7 @@ interface ScrapedProblem {
 // ===================================================================
 
 const API = "https://artofproblemsolving.com/wiki/api.php";
-const SEED_RD = 50;
+const SEED_RD = 150;
 const SEED_VOLATILITY = 0.06;
 
 // Rate limit: wait between API calls to be respectful
@@ -135,18 +135,23 @@ function parseAnswerKey(wikitext: string): string[] {
 }
 
 function splitProblems(wikitext: string): string[] {
-  // Split on ==Problem N== or == Problem N == headers
-  // Returns array of problem texts (index 0 = problem 1)
-  const parts = wikitext.split(/==\s*Problem\s+(\d+)\s*==/);
+  // Split on ==Problem N== or ===Problem N=== headers (2 or 3 equals signs)
+  // Some contest pages (e.g. 2001 AMC 8) use === for grouped problem subsections
+  const parts = wikitext.split(/={2,3}\s*Problem\s+(\d+)\s*={2,3}/);
   // parts: [preamble, "1", text1, "2", text2, ...]
   const problems: string[] = [];
   for (let i = 1; i < parts.length; i += 2) {
     const num = parseInt(parts[i]);
     const text = parts[i + 1] || "";
-    // Trim everything after ==Solution==, ==See Also==, or bare "Solution" link text
-    let cleaned = text.split(/==\s*(?:Solution|See\s+Also|See\s+also|Video)/i)[0].trim();
-    // Remove trailing bare "Solution" word (left over from [[...|Solution]] wiki links)
-    cleaned = cleaned.replace(/\n\s*Solution\s*$/, "").trim();
+    // Trim everything after ==Solution==, ===Solution===, ==See Also==, or ==Video==
+    let cleaned = text.split(/={2,3}\s*(?:Solution|See\s+Also|See\s+also|Video)/i)[0].trim();
+    // Truncate at [[...|Solution]] wiki links (these mark end of problem text)
+    // Note: wiki links may have spaces around the pipe: [[...|Solution]] or [[...| Solution]]
+    cleaned = cleaned.replace(/\[\[[^\]]*\|\s*Solution\s*\]\][\s\S]*$/, "").trim();
+    // Truncate at bare "Solution" on its own line (no == header, common on last-problem pages)
+    cleaned = cleaned.replace(/\n\s*Solutions?\s*\n[\s\S]*$/, "").trim();
+    // Remove trailing bare "Solution" word (if it's the very last thing)
+    cleaned = cleaned.replace(/\n\s*Solutions?\s*$/i, "").trim();
     // Remove trailing stray = signs (from partial == headers)
     cleaned = cleaned.replace(/\n\s*=+\s*$/, "").trim();
     problems[num - 1] = cleaned;
@@ -171,6 +176,9 @@ function convertMathTags(text: string): string {
   result = result.replace(/\[\[[^\]]*\|Solution\]\]/gi, "");
   // Remove <center>...</center> tags (keep content)
   result = result.replace(/<\/?center>/gi, "");
+  // Handle <nowiki>...</nowiki> — used to escape dollar signs that aren't LaTeX
+  // e.g. <nowiki>$2.40</nowiki> → $2.40 (literal text, not math)
+  result = result.replace(/<nowiki>([\s\S]*?)<\/nowiki>/gi, "$1");
   // Convert '''bold''' wiki markup to plain text
   result = result.replace(/'''([^']*?)'''/g, "$1");
   // Remove empty lines at start/end
@@ -179,15 +187,26 @@ function convertMathTags(text: string): string {
 }
 
 function extractChoices(text: string): { content: string; choices: string[] } {
-  // Find the line containing answer choices
-  // Formats: \textbf{(A)}, \text{(A)}, \textrm{(A)}, \mathrm{(A)}
-  const choiceDetect = /\\(?:text(?:bf|rm)?|mathrm)\{\(A\)/;
+  // Find the line containing answer choices.
+  // Format 1: \textbf{(A)}, \text{(A)}, \mathrm{(A) \ }, \textbf {(A) }
+  // Format 2: (\mathrm{A}), (\mathrm {A})  — parens outside the command
+  const CMD = "\\\\(?:text(?:bf|rm)?|math(?:rm|bf)?)";
+  const format1Detect = new RegExp(`${CMD}\\s*\\{\\s*\\(A\\)`);
+  const format2Detect = new RegExp(`\\(\\s*${CMD}\\s*\\{A\\}`);
+
   const lines = text.split("\n");
   let choiceLineIdx = -1;
+  let format: 1 | 2 = 1;
 
   for (let i = 0; i < lines.length; i++) {
-    if (choiceDetect.test(lines[i])) {
+    if (format1Detect.test(lines[i])) {
       choiceLineIdx = i;
+      format = 1;
+      break;
+    }
+    if (format2Detect.test(lines[i])) {
+      choiceLineIdx = i;
+      format = 2;
       break;
     }
   }
@@ -196,24 +215,40 @@ function extractChoices(text: string): { content: string; choices: string[] } {
     return { content: text, choices: [] };
   }
 
+  // Collect choice text — may span multiple lines in some wiki pages
   let choiceLine = lines[choiceLineIdx].trim();
+  let endIdx = choiceLineIdx;
+  const eMarker = format === 1 ? /\(E\)/ : /\{E\}/;
+  if (!eMarker.test(choiceLine)) {
+    for (let j = choiceLineIdx + 1; j < lines.length && j < choiceLineIdx + 20; j++) {
+      choiceLine += " " + lines[j].trim();
+      endIdx = j;
+      if (eMarker.test(lines[j])) break;
+    }
+  }
 
-  // Remove surrounding $...$ if the whole line is wrapped
+  // Remove surrounding $...$ if the whole block is wrapped
   if (choiceLine.startsWith("$") && choiceLine.endsWith("$")) {
     choiceLine = choiceLine.slice(1, -1).trim();
   }
 
-  // Split by \textbf{(X)}, \text{(X)}, or \mathrm{(X)} patterns
-  // The separator after } can be: space, \  (backslash-space), ~, or nothing
-  // Be careful: \textbf{(B) } \dfrac — the \ before dfrac is NOT a separator
-  const parts = choiceLine.split(/\\(?:text(?:bf|rm)?|mathrm)\{\([A-E]\)\s*\}\s*(?:\\[ ~]|~)?\s*/);
+  // Split by the detected format's choice markers
+  let parts: string[];
+  if (format === 1) {
+    // \textbf{(X)...}, \mathrm{(X) \ }, etc. — parens inside braces
+    parts = choiceLine.split(new RegExp(`${CMD}\\s*\\{\\s*\\([A-E]\\)[^}]*\\}\\s*(?:\\\\[ ~]|~)?\\s*`));
+  } else {
+    // (\mathrm{X}), (\mathrm {X}) — parens outside the command
+    parts = choiceLine.split(new RegExp(`\\(\\s*${CMD}\\s*\\{[A-E]\\}\\s*\\)\\s*(?:\\\\[ ~\\\\]|~)?\\s*`));
+  }
   // parts[0] is before (A), parts[1] is value of A, parts[2] is value of B, etc.
 
   const choices: string[] = [];
   for (let i = 1; i < parts.length; i++) {
     let value = parts[i].trim();
-    // Remove trailing \qquad, \quad, commas
+    // Remove trailing \qquad, \quad, commas, and stray \\ (LaTeX newlines)
     value = value.replace(/\\qquad\s*/g, "").replace(/\\quad\s*/g, "").trim();
+    value = value.replace(/\\\\\s*/g, "").trim();
     value = value.replace(/,\s*$/, "").trim();
     // Wrap in $...$ if it contains LaTeX commands (so it renders properly)
     if (value && /\\/.test(value) && !value.startsWith("$")) {
@@ -222,8 +257,8 @@ function extractChoices(text: string): { content: string; choices: string[] } {
     if (value) choices.push(value);
   }
 
-  // Remove the choice line from content
-  lines.splice(choiceLineIdx, 1);
+  // Remove all choice lines from content
+  lines.splice(choiceLineIdx, endIdx - choiceLineIdx + 1);
   const content = lines.join("\n").trim();
 
   return { content, choices };
@@ -411,10 +446,12 @@ async function scrapeContest(contest: string, year: number): Promise<void> {
       }
     }
 
-    // Clean up content
+    // Clean up content (order matters: remove templates first, then trailing text)
     content = content
       .replace(/\n{3,}/g, "\n\n") // collapse multiple blank lines
-      .replace(/\n\s*Solution\s*$/, "") // remove trailing "Solution" link text
+      .replace(/\n\s*\{\{[^}]*\}\}[\s\S]*$/, "") // remove trailing {{template}} blocks (e.g. {{AIME box}})
+      .replace(/\n\s*~[^\n]*$/, "") // remove trailing user signatures (e.g. "~good luck :D")
+      .replace(/\n\s*\(?Solutions?\)?\s*$/i, "") // remove trailing "Solution", "(Solution)", "Solutions"
       .replace(/\n\s*=+\s*$/, "") // remove trailing stray = signs
       .trim();
 
