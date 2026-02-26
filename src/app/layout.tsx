@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { FirebaseAuthProvider } from "@/contexts/FirebaseAuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { SessionProvider } from "@/contexts/SessionContext";
+import { UsernameGate } from "@/components/UsernameGate";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -23,7 +25,11 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen bg-[var(--background)] antialiased">
         <ThemeProvider>
-          <FirebaseAuthProvider>{children}</FirebaseAuthProvider>
+          <FirebaseAuthProvider>
+            <SessionProvider>
+              <UsernameGate>{children}</UsernameGate>
+            </SessionProvider>
+          </FirebaseAuthProvider>
         </ThemeProvider>
       </body>
     </html>

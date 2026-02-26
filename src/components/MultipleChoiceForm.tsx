@@ -165,7 +165,7 @@ export function MultipleChoiceForm({
         <button
           onClick={handleSubmit}
           disabled={!selected || disabled || submitting}
-          className={`w-full py-3 px-6 bg-[var(--accent)] text-white font-medium rounded-lg hover:bg-[var(--accent-hover)] hover:scale-[1.01] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
+          className={`w-full py-3 px-6 bg-[var(--btn-primary)] text-[var(--btn-primary-text)] font-medium rounded-lg hover:bg-[var(--btn-primary-hover)] hover:scale-[1.01] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
             selected && !submitting ? "animate-pulse-subtle" : ""
           }`}
         >

@@ -2,6 +2,7 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useState,
@@ -46,25 +47,25 @@ export function FirebaseAuthProvider({ children }: { children: ReactNode }) {
     return () => unsubscribe?.();
   }, []);
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = useCallback(async () => {
     const { getFirebaseAuth } = await import("@/lib/firebase");
     const { signInWithPopup, GoogleAuthProvider } = await import(
       "firebase/auth"
     );
     const provider = new GoogleAuthProvider();
     await signInWithPopup(getFirebaseAuth(), provider);
-  };
+  }, []);
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     const { getFirebaseAuth } = await import("@/lib/firebase");
     const { signOut: firebaseSignOut } = await import("firebase/auth");
     await firebaseSignOut(getFirebaseAuth());
-  };
+  }, []);
 
-  const getIdToken = async (): Promise<string | null> => {
+  const getIdToken = useCallback(async (): Promise<string | null> => {
     if (!user) return null;
     return user.getIdToken();
-  };
+  }, [user]);
 
   return (
     <FirebaseAuthContext.Provider

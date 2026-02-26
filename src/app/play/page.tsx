@@ -6,9 +6,12 @@ import { Problem } from "@/components/Problem";
 import { AnswerForm } from "@/components/AnswerForm";
 import { MultipleChoiceForm } from "@/components/MultipleChoiceForm";
 import { RatingSidebar } from "@/components/RatingSidebar";
+import { ComboIndicator } from "@/components/ComboIndicator";
+import { TierUpCelebration, DemotionToast } from "@/components/TierUpCelebration";
 import { ReportButton } from "@/components/ReportButton";
-import { useSession } from "@/hooks/useSession";
-import type { ProblemResponse, AttemptResponse, ApiResponse } from "@/types";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
+import { useSessionContext } from "@/contexts/SessionContext";
+import type { ProblemResponse, AttemptResponse, ApiResponse, TierChange } from "@/types";
 
 interface SessionEntry {
   rating: number;
@@ -27,7 +30,8 @@ function checkAnswerClient(submitted: string, correct: string): boolean {
 }
 
 export default function PlayPage() {
-  const { player, loading: sessionLoading, error: sessionError, fetchWithSession, refreshPlayer, initSession } = useSession();
+  const { user, signInWithGoogle } = useFirebaseAuth();
+  const { player, loading: sessionLoading, error: sessionError, fetchWithSession, refreshPlayer, initSession } = useSessionContext();
   const [problem, setProblem] = useState<ProblemResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -44,6 +48,23 @@ export default function PlayPage() {
   const [startingRating, setStartingRating] = useState<number | null>(null);
   const [sessionHistory, setSessionHistory] = useState<SessionEntry[]>([]);
   const startingRatingSet = useRef(false);
+
+  // Combo counter (consecutive correct answers)
+  const [combo, setCombo] = useState(0);
+  const [maxCombo, setMaxCombo] = useState(0);
+
+  // Tier change celebration/demotion toast
+  const [tierChange, setTierChange] = useState<TierChange | null>(null);
+
+  // Sign-in nudge (every 5 attempts for anonymous users)
+  const attemptCount = useRef(0);
+  const [showNudge, setShowNudge] = useState(false);
+
+  // Prevent accidental double-click from Submit → Next Problem
+  const lastSubmitTime = useRef(0);
+
+  // Pre-fetched next problem from the attempt response
+  const prefetchedProblem = useRef<ProblemResponse | null>(null);
 
   // Load session history from sessionStorage on mount
   useEffect(() => {
@@ -68,6 +89,24 @@ export default function PlayPage() {
   }, [player]);
 
   const fetchProblem = useCallback(async () => {
+    // Guard against accidental double-click (Submit → Next within 500ms)
+    if (lastSubmitTime.current && Date.now() - lastSubmitTime.current < 500) {
+      return;
+    }
+
+    // Use prefetched problem if available (instant transition)
+    const prefetched = prefetchedProblem.current;
+    if (prefetched) {
+      prefetchedProblem.current = null;
+      setAttemptResult(null);
+      setSolved(false);
+      setShowAnswer(false);
+      setUserAnswer(null);
+      setError(null);
+      setProblem(prefetched);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setAttemptResult(null);
@@ -102,6 +141,7 @@ export default function PlayPage() {
   const handleSubmit = async (answer: string) => {
     if (!problem) return;
     setUserAnswer(answer);
+    lastSubmitTime.current = Date.now();
 
     try {
       const response = await fetchWithSession("/api/attempt", {
@@ -124,7 +164,38 @@ export default function PlayPage() {
         });
 
         setAttemptResult(result.data);
-        if (result.data.correct) setSolved(true);
+
+        // Background pre-fetch next problem (non-blocking)
+        fetchWithSession("/api/problem/next")
+          .then((r) => r.json())
+          .then((res: ApiResponse<ProblemResponse>) => {
+            if (res.success && res.data) {
+              prefetchedProblem.current = res.data;
+            }
+          })
+          .catch(() => {});
+        if (result.data.correct) {
+          setSolved(true);
+          setCombo((prev) => {
+            const next = prev + 1;
+            setMaxCombo((m) => Math.max(m, next));
+            return next;
+          });
+        } else {
+          setCombo(0);
+        }
+
+        // Show tier change celebration/toast
+        if (result.data.tierChange) {
+          setTierChange(result.data.tierChange);
+        }
+
+        // Show sign-in nudge every 5 attempts for anonymous users
+        attemptCount.current += 1;
+        if (!user && attemptCount.current % 5 === 0) {
+          setShowNudge(true);
+        }
+
         await refreshPlayer();
       } else {
         setError(result.error || "Failed to submit answer");
@@ -179,7 +250,7 @@ export default function PlayPage() {
             <div className="text-[var(--error)]">{sessionError}</div>
             <button
               onClick={initSession}
-              className="px-4 py-2 bg-[var(--accent)] text-white rounded-lg hover:bg-[var(--accent-hover)]"
+              className="px-4 py-2 bg-[var(--btn-primary)] text-[var(--btn-primary-text)] rounded-lg hover:bg-[var(--btn-primary-hover)]"
             >
               Retry
             </button>
@@ -193,10 +264,45 @@ export default function PlayPage() {
     <main className="min-h-screen flex flex-col">
       <Header />
 
+      {/* Tier change celebration / demotion toast */}
+      {tierChange?.promoted && (
+        <TierUpCelebration tierChange={tierChange} onDismiss={() => setTierChange(null)} />
+      )}
+      {tierChange && !tierChange.promoted && (
+        <DemotionToast tierChange={tierChange} onDismiss={() => setTierChange(null)} />
+      )}
+
+      {/* Sign-in nudge banner */}
+      {showNudge && (
+        <div className="mx-auto mt-3 max-w-xl w-full px-4 animate-fade-in-up">
+          <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg bg-[var(--accent)]/10 border border-[var(--accent)]/20">
+            <p className="text-sm text-[var(--foreground)]">
+              Nice session!{" "}
+              <button onClick={signInWithGoogle} className="font-semibold text-[var(--accent)] hover:underline">
+                Sign in
+              </button>{" "}
+              to keep your rating.
+            </p>
+            <button
+              onClick={() => setShowNudge(false)}
+              className="flex-shrink-0 p-1 rounded hover:bg-[var(--border)]/30 text-[var(--muted)] hover:text-[var(--foreground)] transition-colors"
+              aria-label="Dismiss"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="flex-1 flex items-start justify-center px-4 sm:px-6 lg:px-8 py-8">
         <div className="w-full max-w-5xl flex flex-col lg:flex-row gap-5 items-start">
           {/* Main problem card */}
           <div className="flex-1 min-w-0">
+            {/* Combo indicator */}
+            <ComboIndicator combo={combo} />
+
             {loading ? (
               <div className="text-center text-[var(--muted)] py-20">
                 Loading problem...
@@ -206,7 +312,7 @@ export default function PlayPage() {
                 <div className="text-[var(--error)]">{error}</div>
                 <button
                   onClick={fetchProblem}
-                  className="px-4 py-2 bg-[var(--accent)] text-white rounded-lg hover:bg-[var(--accent-hover)] transition-colors"
+                  className="px-4 py-2 bg-[var(--btn-primary)] text-[var(--btn-primary-text)] rounded-lg hover:bg-[var(--btn-primary-hover)] transition-colors"
                 >
                   Try Again
                 </button>
@@ -246,7 +352,7 @@ export default function PlayPage() {
                       )}
                       <button
                         onClick={fetchProblem}
-                        className="w-full py-3 px-6 bg-[var(--accent)] text-white font-medium rounded-lg hover:bg-[var(--accent-hover)] hover:scale-[1.01] transition-all duration-200 flex items-center justify-center gap-2"
+                        className="w-full py-3 px-6 bg-[var(--btn-primary)] text-[var(--btn-primary-text)] font-medium rounded-lg hover:bg-[var(--btn-primary-hover)] hover:scale-[1.01] transition-all duration-200 flex items-center justify-center gap-2"
                       >
                         Next Problem
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
@@ -292,12 +398,14 @@ export default function PlayPage() {
           {!loading && !error && problem && (
             <RatingSidebar
               rating={player?.rating}
+              confirmedTier={player?.confirmedTier}
               lastChange={attemptResult?.ratingChange}
               problemRating={problem.problemRating}
               source={submitted ? problem.source : null}
               sourceNumber={submitted ? problem.sourceNumber : null}
               initialRating={startingRating}
               sessionHistory={sessionHistory}
+              maxCombo={maxCombo}
             />
           )}
         </div>

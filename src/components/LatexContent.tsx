@@ -40,9 +40,10 @@ function renderContent(input: string): string {
     .join("");
 }
 
-/** Convert LaTeX environments that KaTeX doesn't support to equivalents it does. */
+/** Convert LaTeX commands that KaTeX doesn't fully support to equivalents it does. */
 function katexCompat(latex: string): string {
   return latex
+    .replace(/\\textdollar/g, "\\$")
     .replace(/\\begin\{tabular\}/g, "\\begin{array}")
     .replace(/\\end\{tabular\}/g, "\\end{array}");
 }

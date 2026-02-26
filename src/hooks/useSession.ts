@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { SESSION_TOKEN_HEADER } from "@/types";
 import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import type { PlayerResponse, ApiResponse } from "@/types";
@@ -22,6 +22,10 @@ export function useSession() {
     loading: true,
     error: null,
   });
+  // Track whether session has been initialized to prevent redundant re-runs
+  const initialized = useRef(false);
+  // Track the current Firebase user identity to detect auth changes
+  const lastFirebaseUid = useRef<string | null | undefined>(undefined);
 
   // Build auth headers for the current auth mode
   const buildAuthHeaders = useCallback(async (): Promise<Record<string, string>> => {
@@ -44,19 +48,42 @@ export function useSession() {
 
   // Initialize session from Firebase or localStorage
   const initSession = useCallback(async () => {
+    // Detect whether the Firebase user changed (sign-in / sign-out)
+    const currentUid = firebaseUser?.uid ?? null;
+    const authChanged = lastFirebaseUid.current !== undefined && lastFirebaseUid.current !== currentUid;
+    lastFirebaseUid.current = currentUid;
+
+    // Skip re-initialization if session is already loaded and auth didn't change
+    if (initialized.current && !authChanged) {
+      return;
+    }
+
     setState((prev) => ({ ...prev, loading: true, error: null }));
 
     try {
       const headers = await buildAuthHeaders();
+
+      // If Firebase user exists and we have an anonymous session token,
+      // send both headers so the server can attempt account merge
+      if (firebaseUser && typeof window !== "undefined") {
+        const storedToken = localStorage.getItem(STORAGE_KEY);
+        if (storedToken) {
+          headers[SESSION_TOKEN_HEADER] = storedToken;
+        }
+      }
+
       const response = await fetch("/api/player", { headers });
       const result: ApiResponse<PlayerResponse> = await response.json();
 
       if (result.success && result.data) {
-        // Only store session token for anonymous users
-        if (!firebaseUser && typeof window !== "undefined") {
+        if (firebaseUser && typeof window !== "undefined") {
+          // Clear anonymous token after successful auth (merged or fresh)
+          localStorage.removeItem(STORAGE_KEY);
+        } else if (!firebaseUser && typeof window !== "undefined") {
           localStorage.setItem(STORAGE_KEY, result.data.sessionToken);
         }
 
+        initialized.current = true;
         setState({
           token: result.data.sessionToken,
           player: result.data,

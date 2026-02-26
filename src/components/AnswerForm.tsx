@@ -47,7 +47,7 @@ export function AnswerForm({ onSubmit, disabled = false, submitLabel = "Submit A
       <button
         type="submit"
         disabled={!answer.trim() || disabled || submitting}
-        className="w-full py-3 px-6 bg-[var(--accent)] text-white font-medium rounded-lg hover:bg-[var(--accent-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        className="w-full py-3 px-6 bg-[var(--btn-primary)] text-[var(--btn-primary-text)] font-medium rounded-lg hover:bg-[var(--btn-primary-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
       >
         {submitting ? "Submitting..." : (
           <>

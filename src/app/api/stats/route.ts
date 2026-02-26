@@ -8,7 +8,7 @@ import type { ApiResponse, StatsResponse } from "@/types";
  * GET /api/stats
  *
  * Get statistics for the current player.
- * Includes rating history, accuracy, and recent attempts.
+ * Includes rating history, accuracy, streaks, difficulty breakdown, and activity heatmap.
  */
 export async function GET(request: NextRequest): Promise<NextResponse<ApiResponse<StatsResponse>>> {
   try {
@@ -24,16 +24,17 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
       );
     }
 
-    // Re-fetch with attempts included
+    const isAuthenticated = resolvedPlayer.firebaseUid !== null;
+
+    // Fetch all attempts for comprehensive stats
     const player = await prisma.player.findUnique({
       where: { id: resolvedPlayer.id },
       include: {
         attempts: {
-          orderBy: { createdAt: "desc" },
-          take: 50,
+          orderBy: { createdAt: "asc" },
           include: {
             problem: {
-              select: { content: true, source: true, sourceNumber: true },
+              select: { content: true, source: true, sourceNumber: true, difficulty: true },
             },
           },
         },
@@ -47,36 +48,72 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
       );
     }
 
-    // Calculate accuracy
-    const totalAttempts = player.attempts.length;
-    const correctAttempts = player.attempts.filter((a: { correct: boolean }) => a.correct).length;
+    const allAttempts = player.attempts;
+    const totalAttempts = allAttempts.length;
+    const correctAttempts = allAttempts.filter((a) => a.correct).length;
     const accuracyPercentage =
       totalAttempts > 0 ? Math.round((correctAttempts / totalAttempts) * 100) : 0;
 
-    // Build rating history (from attempts)
-    const ratingHistory = player.attempts
-      .slice()
-      .reverse() // Oldest first for chart
-      .map((attempt: { ratingAfter: number; createdAt: Date }) => ({
-        rating: attempt.ratingAfter,
-        timestamp: attempt.createdAt.toISOString(),
-      }));
+    // Peak rating
+    const peakRating = totalAttempts > 0
+      ? Math.max(...allAttempts.map((a) => a.ratingAfter))
+      : player.rating;
 
-    // Recent attempts (last 10)
-    const recentAttempts = player.attempts.slice(0, 10).map((attempt: {
-      problem: { content: string; source: string | null; sourceNumber: number | null };
-      correct: boolean;
-      ratingAfter: number;
-      ratingBefore: number;
-      createdAt: Date;
-    }) => ({
-      problemContent: attempt.problem.content,
-      source: attempt.problem.source,
-      sourceNumber: attempt.problem.sourceNumber,
-      correct: attempt.correct,
-      ratingChange: attempt.ratingAfter - attempt.ratingBefore,
-      timestamp: attempt.createdAt.toISOString(),
+    // Streaks (iterate oldest-first)
+    let bestStreak = 0;
+    let currentStreak = 0;
+    for (const attempt of allAttempts) {
+      if (attempt.correct) {
+        currentStreak++;
+        bestStreak = Math.max(bestStreak, currentStreak);
+      } else {
+        currentStreak = 0;
+      }
+    }
+
+    // Rating history (oldest first for chart) — cap at last 50
+    const historySlice = allAttempts.slice(-50);
+    const ratingHistory = historySlice.map((a) => ({
+      rating: a.ratingAfter,
+      timestamp: a.createdAt.toISOString(),
     }));
+
+    // Recent attempts (last 10, newest first)
+    const recentAttempts = allAttempts.slice(-10).reverse().map((a) => ({
+      problemContent: a.problem.content,
+      source: a.problem.source,
+      sourceNumber: a.problem.sourceNumber,
+      correct: a.correct,
+      ratingChange: a.ratingAfter - a.ratingBefore,
+      timestamp: a.createdAt.toISOString(),
+    }));
+
+    // Difficulty breakdown
+    const diffBreakdown = { easy: { total: 0, correct: 0 }, medium: { total: 0, correct: 0 }, hard: { total: 0, correct: 0 } };
+    for (const a of allAttempts) {
+      const diff = a.problem.difficulty.toLowerCase() as "easy" | "medium" | "hard";
+      if (diffBreakdown[diff]) {
+        diffBreakdown[diff].total++;
+        if (a.correct) diffBreakdown[diff].correct++;
+      }
+    }
+
+    // Activity heatmap (authenticated only, last 90 days)
+    let activityHeatmap: Array<{ date: string; count: number }> | undefined;
+    if (isAuthenticated) {
+      const ninetyDaysAgo = new Date();
+      ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+      const dayCounts = new Map<string, number>();
+      for (const a of allAttempts) {
+        if (a.createdAt >= ninetyDaysAgo) {
+          const day = a.createdAt.toISOString().slice(0, 10);
+          dayCounts.set(day, (dayCounts.get(day) || 0) + 1);
+        }
+      }
+      activityHeatmap = Array.from(dayCounts.entries())
+        .map(([date, count]) => ({ date, count }))
+        .sort((a, b) => a.date.localeCompare(b.date));
+    }
 
     return NextResponse.json({
       success: true,
@@ -85,6 +122,14 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
           rating: player.rating,
           gamesPlayed: player.gamesPlayed,
           createdAt: player.createdAt.toISOString(),
+          username: player.username ?? null,
+          displayName: player.displayName ?? null,
+          isAuthenticated,
+          ratingDeviation: player.ratingDeviation,
+          peakRating,
+          currentStreak,
+          bestStreak,
+          tierName: player.confirmedTier,
         },
         accuracy: {
           total: totalAttempts,
@@ -93,6 +138,8 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
         },
         ratingHistory,
         recentAttempts,
+        difficultyBreakdown: diffBreakdown,
+        activityHeatmap,
       },
     });
   } catch (error) {

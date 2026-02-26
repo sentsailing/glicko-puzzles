@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { Header } from "@/components/Header";
+import { HeroCTA } from "@/components/HeroCTA";
 import { TierIcon } from "@/components/TierIcon";
 import { TIERS } from "@/lib/tiers";
 
@@ -12,8 +12,8 @@ export default function HomePage() {
         {/* Hero */}
         <div className="text-center max-w-lg mb-12 animate-fade-in-up">
           <div className="flex justify-center mb-5">
-            <div className="tier-icon-glow" style={{ "--tier-glow": "#c084fc" } as React.CSSProperties}>
-              <TierIcon tier="Icosahedron" size={72} className="text-purple-400 tier-icon-spin" />
+            <div className="tier-icon-glow" style={{ "--tier-glow": "#7c3aed" } as React.CSSProperties}>
+              <TierIcon tier="Icosahedron" size={72} className="text-violet-600" animate />
             </div>
           </div>
           <h1 className="text-5xl font-bold mb-3 tracking-tight">PolyPuzzle</h1>
@@ -21,14 +21,7 @@ export default function HomePage() {
             Puzzles have ratings too. Can you beat them?
           </p>
 
-          <Link
-            href="/play"
-            className="inline-flex items-center gap-2.5 py-3.5 px-10 bg-[var(--accent)] text-white font-semibold text-lg rounded-full hover:bg-[var(--accent-hover)] transition-all hover:scale-105 shadow-lg shadow-[var(--accent)]/20"
-          >
-            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
-            Start Playing
-          </Link>
-          <p className="mt-3 text-sm text-[var(--muted)]">Sign in to save your progress.</p>
+          <HeroCTA />
         </div>
 
         {/* Tier Ladder */}
@@ -53,7 +46,7 @@ export default function HomePage() {
                     className={`
                       relative flex items-center gap-4 px-5 py-3 rounded-xl border transition-all
                       ${isTop
-                        ? `${tier.bg} ${tier.border} border shadow-lg shadow-purple-500/10`
+                        ? `${tier.bg} ${tier.border} border shadow-lg shadow-violet-600/10`
                         : isBottom
                         ? "border-transparent opacity-60"
                         : `border-[var(--border)]/40 hover:${tier.bg} hover:border-[var(--border)]`

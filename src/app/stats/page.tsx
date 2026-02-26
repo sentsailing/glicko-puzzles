@@ -4,11 +4,11 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
 import { StatsDisplay } from "@/components/StatsDisplay";
-import { useSession } from "@/hooks/useSession";
+import { useSessionContext } from "@/contexts/SessionContext";
 import type { StatsResponse, ApiResponse } from "@/types";
 
 export default function StatsPage() {
-  const { player, loading: sessionLoading, fetchWithSession } = useSession();
+  const { player, loading: sessionLoading, fetchWithSession } = useSessionContext();
   const [stats, setStats] = useState<StatsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -65,7 +65,7 @@ export default function StatsPage() {
               <div className="text-[var(--error)]">{error}</div>
               <button
                 onClick={fetchStats}
-                className="px-4 py-2 bg-[var(--accent)] text-white rounded-lg hover:bg-[var(--accent-hover)]"
+                className="px-4 py-2 bg-[var(--btn-primary)] text-[var(--btn-primary-text)] rounded-lg hover:bg-[var(--btn-primary-hover)]"
               >
                 Try Again
               </button>
@@ -78,7 +78,7 @@ export default function StatsPage() {
                 </div>
                 <Link
                   href="/play"
-                  className="inline-block px-6 py-3 bg-[var(--accent)] text-white font-medium rounded-lg hover:bg-[var(--accent-hover)]"
+                  className="inline-block px-6 py-3 bg-[var(--btn-primary)] text-[var(--btn-primary-text)] font-medium rounded-lg hover:bg-[var(--btn-primary-hover)]"
                 >
                   Start Playing
                 </Link>

@@ -250,6 +250,15 @@ function extractChoices(text: string): { content: string; choices: string[] } {
     value = value.replace(/\\qquad\s*/g, "").replace(/\\quad\s*/g, "").trim();
     value = value.replace(/\\\\\s*/g, "").trim();
     value = value.replace(/,\s*$/, "").trim();
+    // Strip trailing <br />, <br \>, <br> artifacts
+    value = value.replace(/<br\s*\\?\/?>\s*\$?\s*$/, "").trim();
+    // Strip trailing orphan $ after valid $...$ math (e.g. "$\text{hello}$  $")
+    value = value.replace(/(\$)\s+\$\s*$/, "$1").trim();
+    // If odd number of dollar signs, strip trailing orphan $
+    const dollarCount = (value.match(/\$/g) || []).length;
+    if (dollarCount % 2 === 1 && value.match(/\$\s*$/)) {
+      value = value.replace(/\$\s*$/, "").trim();
+    }
     // Wrap in $...$ if it contains LaTeX commands (so it renders properly)
     if (value && /\\/.test(value) && !value.startsWith("$")) {
       value = `$${value}$`;

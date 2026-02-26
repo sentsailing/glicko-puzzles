@@ -11,6 +11,9 @@ model Player {
   id              String    @id @default(uuid())
   sessionToken    String    @unique
   firebaseUid     String?   @unique
+  username        String?   @unique
+  usernameLower   String?   @unique
+  displayName     String?
   rating          Float     @default(1200)
   ratingDeviation Float     @default(350)
   volatility      Float     @default(0.06)
@@ -18,6 +21,8 @@ model Player {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   lastActiveAt    DateTime  @default(now())
+  confirmedTier   String    @default("Pentagonal Prism")
+  tierStreak      Int       @default(0)
   attempts        Attempt[]
   reports         Report[]
 
@@ -48,6 +53,7 @@ model Problem {
   ratingDeviation Float      @default(350)
   volatility      Float      @default(0.06)
   difficulty      Difficulty
+  excluded        Boolean    @default(false)  // Manually flagged as excluded by admin
   source          String?    // e.g. "2024 AMC 8", "2024 AIME I"
   sourceNumber    Int?       // Problem number (1-25 or 1-15)
   createdAt       DateTime   @default(now())
@@ -57,6 +63,7 @@ model Problem {
   @@unique([source, sourceNumber])
   @@index([rating])
   @@index([difficulty])
+  @@index([excluded, rating])
 }
 
 model Attempt {
@@ -76,6 +83,7 @@ model Attempt {
   @@index([problemId])
   @@index([createdAt])
   @@index([playerId, createdAt])
+  @@index([playerId, problemId])
 }
 
 enum ReportType {

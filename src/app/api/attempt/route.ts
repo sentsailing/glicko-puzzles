@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { ratingSystem } from "@/lib/rating";
 import { checkAnswer } from "@/lib/problems";
-import { resolvePlayer } from "@/lib/auth";
+import { updateConfirmedTier } from "@/lib/tiers";
+import { resolvePlayer, invalidatePlayerCache } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import type { ApiResponse, AttemptResponse } from "@/types";
 
@@ -12,23 +13,14 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
  * POST /api/attempt
  *
  * Submit an answer for a problem.
- * Returns whether the answer was correct and the new rating.
+ * Returns whether the answer was correct, the new rating, and the next problem.
  */
 export async function POST(request: NextRequest): Promise<NextResponse<ApiResponse<AttemptResponse>>> {
   try {
     const rateLimited = checkRateLimit(request, { limit: 30 });
     if (rateLimited) return rateLimited;
 
-    const { player, error: authError } = await resolvePlayer(request);
-
-    if (!player) {
-      return NextResponse.json(
-        { success: false, error: authError || "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    // Parse and validate request body
+    // Parse and validate request body first (fast, no DB)
     const body = await request.json();
     const { problemId, answer } = body;
 
@@ -46,17 +38,31 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       );
     }
 
-    // Find problem
-    const problem = await prisma.problem.findUnique({
-      where: { id: problemId },
-    });
+    // Parallelize auth and problem fetch — they don't depend on each other
+    const [{ player, error: authError }, problem] = await Promise.all([
+      resolvePlayer(request),
+      prisma.problem.findUnique({
+        where: { id: problemId },
+        select: {
+          id: true,
+          answer: true,
+          rating: true,
+          ratingDeviation: true,
+          volatility: true,
+        },
+      }),
+    ]);
+
+    if (!player) {
+      return NextResponse.json(
+        { success: false, error: authError || "Unauthorized" },
+        { status: 401 }
+      );
+    }
 
     if (!problem) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "Problem not found",
-        },
+        { success: false, error: "Problem not found" },
         { status: 404 }
       );
     }
@@ -75,9 +81,15 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       problemVolatility: problem.volatility,
     });
 
+    // Compute tier hysteresis
+    const tierResult = updateConfirmedTier(
+      ratingResult.newPlayerRating,
+      player.confirmedTier,
+      player.tierStreak,
+    );
+
     // Update player and problem ratings, create attempt record
     const [attempt] = await prisma.$transaction([
-      // Create attempt record
       prisma.attempt.create({
         data: {
           playerId: player.id,
@@ -88,7 +100,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
           ratingAfter: ratingResult.newPlayerRating,
         },
       }),
-      // Update player rating
       prisma.player.update({
         where: { id: player.id },
         data: {
@@ -96,9 +107,10 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
           ratingDeviation: ratingResult.newPlayerRD,
           volatility: ratingResult.newPlayerVolatility,
           gamesPlayed: { increment: 1 },
+          confirmedTier: tierResult.confirmedTier,
+          tierStreak: tierResult.tierStreak,
         },
       }),
-      // Update problem rating
       prisma.problem.update({
         where: { id: problem.id },
         data: {
@@ -109,6 +121,9 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       }),
     ]);
 
+    // Invalidate player cache so subsequent requests see updated rating
+    if (player.firebaseUid) invalidatePlayerCache(player.firebaseUid);
+
     return NextResponse.json({
       success: true,
       data: {
@@ -118,6 +133,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
         ratingBefore: player.rating,
         ratingAfter: ratingResult.newPlayerRating,
         ratingChange: ratingResult.newPlayerRating - player.rating,
+        nextProblem: null,
+        tierChange: tierResult.tierChange ?? null,
       },
     });
   } catch (error) {

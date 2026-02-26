@@ -14,7 +14,9 @@ interface TierIconProps {
 }
 
 export function TierIcon({ tier, size = 24, className = "", animate = false }: TierIconProps) {
-  const animClass = animate ? "tier-icon-spin" : "";
+  const animClass = animate
+    ? tier === "Icosahedron" ? "tier-icon-icosa" : "tier-icon-spin"
+    : "";
   const props = {
     width: size,
     height: size,
@@ -31,23 +33,32 @@ export function TierIcon({ tier, size = 24, className = "", animate = false }: T
     case "Tetrahedron":
       return (
         <svg {...props}>
-          {/* Simple tetrahedron: triangle with center lines */}
-          <polygon points="16,4 4,28 28,28" />
-          <line x1="16" y1="4" x2="16" y2="28" />
-          <line x1="4" y1="28" x2="22" y2="16" />
-          <line x1="28" y1="28" x2="10" y2="16" />
+          {/* 3D tetrahedron — side view, two visible faces */}
+          <line x1="16" y1="2" x2="3" y2="27" />
+          <line x1="16" y1="2" x2="29" y2="27" />
+          <line x1="3" y1="27" x2="29" y2="27" />
+          <line x1="16" y1="2" x2="16" y2="27" />
+          <line x1="3" y1="27" x2="16" y2="16" />
+          <line x1="29" y1="27" x2="16" y2="16" />
+          {/* Hidden back edge */}
+          <line x1="3" y1="27" x2="29" y2="16" strokeOpacity={0.25} strokeDasharray="2,2" />
         </svg>
       );
 
     case "Square Pyramid":
       return (
         <svg {...props}>
-          {/* Pyramid: square base + apex */}
-          <polygon points="8,24 24,24 28,20 12,20" />
-          <line x1="16" y1="5" x2="8" y2="24" />
-          <line x1="16" y1="5" x2="24" y2="24" />
-          <line x1="16" y1="5" x2="28" y2="20" />
-          <line x1="16" y1="5" x2="12" y2="20" />
+          {/* 3D pyramid — centered, looking from front-above */}
+          {/* Base square in perspective */}
+          <line x1="6" y1="25" x2="26" y2="25" />
+          <line x1="26" y1="25" x2="24" y2="17" />
+          <line x1="6" y1="25" x2="8" y2="17" />
+          <line x1="8" y1="17" x2="24" y2="17" strokeOpacity={0.3} strokeDasharray="2,2" />
+          {/* Apex edges */}
+          <line x1="16" y1="4" x2="6" y2="25" />
+          <line x1="16" y1="4" x2="26" y2="25" />
+          <line x1="16" y1="4" x2="24" y2="17" />
+          <line x1="16" y1="4" x2="8" y2="17" strokeOpacity={0.5} />
         </svg>
       );
 
@@ -67,14 +78,17 @@ export function TierIcon({ tier, size = 24, className = "", animate = false }: T
     case "Pentagonal Prism":
       return (
         <svg {...props}>
-          {/* Pentagon front face + depth */}
-          <polygon points="16,5 6,12 9,24 23,24 26,12" />
-          <polygon points="20,3 10,10 13,22 27,22 30,10" strokeOpacity={0.4} />
-          <line x1="16" y1="5" x2="20" y2="3" />
-          <line x1="6" y1="12" x2="10" y2="10" />
-          <line x1="9" y1="24" x2="13" y2="22" />
-          <line x1="23" y1="24" x2="27" y2="22" />
-          <line x1="26" y1="12" x2="30" y2="10" />
+          {/* Front pentagon face */}
+          <polygon points="13,6 23,12 20,25 6,25 3,12" />
+          {/* Back pentagon face */}
+          <polygon points="18,4 28,10 25,23 11,23 8,10" strokeOpacity={0.3} />
+          {/* Visible connecting depth edges (top/right) */}
+          <line x1="13" y1="6" x2="18" y2="4" />
+          <line x1="23" y1="12" x2="28" y2="10" />
+          <line x1="20" y1="25" x2="25" y2="23" />
+          {/* Hidden connecting edges (left/bottom) */}
+          <line x1="6" y1="25" x2="11" y2="23" strokeOpacity={0.3} />
+          <line x1="3" y1="12" x2="8" y2="10" strokeOpacity={0.3} />
         </svg>
       );
 
@@ -93,32 +107,39 @@ export function TierIcon({ tier, size = 24, className = "", animate = false }: T
     case "Heptagonal Prism":
       return (
         <svg {...props}>
-          {/* Simplified 7-sided prism front face + depth */}
-          <polygon points="16,4 7,8 4,17 8,25 16,28 24,25 28,17 25,8" />
-          <line x1="16" y1="4" x2="18" y2="2" strokeOpacity={0.5} />
-          <line x1="25" y1="8" x2="27" y2="6" strokeOpacity={0.5} />
-          <line x1="28" y1="17" x2="30" y2="15" strokeOpacity={0.5} />
-          <line x1="24" y1="25" x2="26" y2="23" strokeOpacity={0.5} />
+          {/* Front heptagonal face */}
+          <polygon points="11,5 20,7 24,15 21,24 11,27 4,21 3,12" />
+          {/* Back heptagonal face */}
+          <polygon points="16,3 25,5 29,13 26,22 16,25 9,19 8,10" strokeOpacity={0.3} />
+          {/* Visible connecting edges (top/right) */}
+          <line x1="11" y1="5" x2="16" y2="3" />
+          <line x1="20" y1="7" x2="25" y2="5" />
+          <line x1="24" y1="15" x2="29" y2="13" />
+          <line x1="21" y1="24" x2="26" y2="22" />
+          {/* Hidden connecting edges (left/bottom) */}
+          <line x1="11" y1="27" x2="16" y2="25" strokeOpacity={0.3} />
+          <line x1="4" y1="21" x2="9" y2="19" strokeOpacity={0.3} />
+          <line x1="3" y1="12" x2="8" y2="10" strokeOpacity={0.3} />
         </svg>
       );
 
     case "Square Antiprism":
       return (
         <svg {...props}>
-          {/* Two rotated squares connected by triangular faces */}
-          <rect x="9" y="6" width="14" height="0.1" transform="rotate(0, 16, 16)" />
-          <polygon points="9,8 23,8 23,8 9,8" />
-          <polygon points="16,6 6,10 6,22 16,26 26,22 26,10" />
-          <line x1="6" y1="10" x2="26" y2="10" />
-          <line x1="6" y1="22" x2="26" y2="22" />
-          <line x1="6" y1="10" x2="16" y2="6" />
-          <line x1="26" y1="10" x2="16" y2="6" />
-          <line x1="6" y1="22" x2="16" y2="26" />
-          <line x1="26" y1="22" x2="16" y2="26" />
-          <line x1="6" y1="10" x2="16" y2="14" strokeOpacity={0.3} />
-          <line x1="26" y1="10" x2="16" y2="14" strokeOpacity={0.3} />
-          <line x1="6" y1="22" x2="16" y2="18" strokeOpacity={0.3} />
-          <line x1="26" y1="22" x2="16" y2="18" strokeOpacity={0.3} />
+          {/* Top square face in perspective */}
+          <polygon points="9,6 23,6 24,12 8,12" />
+          {/* Bottom square face rotated 45° */}
+          <polygon points="16,19 28,23 16,27 4,23" />
+          {/* Front connecting zigzag edges */}
+          <line x1="23" y1="6" x2="28" y2="23" />
+          <line x1="24" y1="12" x2="28" y2="23" />
+          <line x1="24" y1="12" x2="16" y2="27" />
+          <line x1="8" y1="12" x2="16" y2="27" />
+          <line x1="8" y1="12" x2="4" y2="23" />
+          <line x1="9" y1="6" x2="4" y2="23" />
+          {/* Back connecting edges (hidden) */}
+          <line x1="9" y1="6" x2="16" y2="19" strokeOpacity={0.25} />
+          <line x1="23" y1="6" x2="16" y2="19" strokeOpacity={0.25} />
         </svg>
       );
 
@@ -139,12 +160,24 @@ export function TierIcon({ tier, size = 24, className = "", animate = false }: T
     case "Hexagonal Antiprism":
       return (
         <svg {...props}>
-          {/* Two rotated hexagons connected */}
-          <polygon points="16,3 7,7 4,16 7,25 16,29 25,25 28,16 25,7" />
-          <line x1="4" y1="16" x2="28" y2="16" strokeOpacity={0.3} />
-          <line x1="7" y1="7" x2="25" y2="25" strokeOpacity={0.3} />
-          <line x1="25" y1="7" x2="7" y2="25" strokeOpacity={0.3} />
-          <circle cx="16" cy="16" r="7" strokeOpacity={0.2} />
+          {/* Top hexagonal face in perspective */}
+          <polygon points="16,4 25,7 26,13 16,16 6,13 7,7" />
+          {/* Bottom hexagonal face rotated 30° */}
+          <polygon points="21,19 28,23 22,28 10,28 4,23 11,19" />
+          {/* Front connecting zigzag edges */}
+          <line x1="25" y1="7" x2="21" y2="19" />
+          <line x1="26" y1="13" x2="28" y2="23" />
+          <line x1="26" y1="13" x2="21" y2="19" />
+          <line x1="16" y1="16" x2="22" y2="28" />
+          <line x1="16" y1="16" x2="10" y2="28" />
+          <line x1="6" y1="13" x2="4" y2="23" />
+          <line x1="6" y1="13" x2="11" y2="19" />
+          <line x1="7" y1="7" x2="4" y2="23" />
+          {/* Back connecting edges (hidden) */}
+          <line x1="16" y1="4" x2="21" y2="19" strokeOpacity={0.25} />
+          <line x1="16" y1="4" x2="11" y2="19" strokeOpacity={0.25} />
+          <line x1="25" y1="7" x2="28" y2="23" strokeOpacity={0.25} />
+          <line x1="7" y1="7" x2="11" y2="19" strokeOpacity={0.25} />
         </svg>
       );
 

@@ -22,6 +22,7 @@ export async function GET(
     const { player, error } = await resolvePlayer(request);
 
     if (player) {
+      const isAuth = player.firebaseUid !== null;
       return NextResponse.json({
         success: true,
         data: {
@@ -29,7 +30,11 @@ export async function GET(
           sessionToken: player.sessionToken,
           rating: player.rating,
           gamesPlayed: player.gamesPlayed,
-          isAuthenticated: player.firebaseUid !== null,
+          isAuthenticated: isAuth,
+          username: player.username ?? null,
+          displayName: player.displayName ?? null,
+          needsUsername: isAuth && !player.username,
+          confirmedTier: player.confirmedTier,
         },
       });
     }
@@ -65,6 +70,10 @@ export async function GET(
         rating: newPlayer.rating,
         gamesPlayed: newPlayer.gamesPlayed,
         isAuthenticated: false,
+        username: null,
+        displayName: null,
+        needsUsername: false,
+        confirmedTier: newPlayer.confirmedTier,
       },
     });
   } catch (error) {

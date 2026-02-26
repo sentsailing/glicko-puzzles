@@ -55,6 +55,10 @@ export interface PlayerResponse {
   rating: number;
   gamesPlayed: number;
   isAuthenticated: boolean;
+  username: string | null;
+  displayName: string | null;
+  needsUsername: boolean;
+  confirmedTier: string;
 }
 
 // Problem API
@@ -76,6 +80,12 @@ export interface AttemptRequest {
   answer: string;
 }
 
+export interface TierChange {
+  promoted: boolean;
+  newTier: string;
+  oldTier: string;
+}
+
 export interface AttemptResponse {
   id: string;
   correct: boolean;
@@ -83,6 +93,8 @@ export interface AttemptResponse {
   ratingBefore: number;
   ratingAfter: number;
   ratingChange: number;
+  nextProblem?: ProblemResponse | null;
+  tierChange?: TierChange | null;
 }
 
 // Stats API
@@ -91,6 +103,14 @@ export interface StatsResponse {
     rating: number;
     gamesPlayed: number;
     createdAt: string;
+    username: string | null;
+    displayName: string | null;
+    isAuthenticated: boolean;
+    ratingDeviation: number;
+    peakRating: number;
+    currentStreak: number;
+    bestStreak: number;
+    tierName: string;
   };
   accuracy: {
     total: number;
@@ -109,6 +129,47 @@ export interface StatsResponse {
     ratingChange: number;
     timestamp: string;
   }>;
+  difficultyBreakdown?: {
+    easy: { total: number; correct: number };
+    medium: { total: number; correct: number };
+    hard: { total: number; correct: number };
+  };
+  activityHeatmap?: Array<{
+    date: string;
+    count: number;
+  }>;
+}
+
+// Username API
+export interface SetUsernameRequest {
+  username: string;
+  displayName?: string;
+}
+
+export interface SetUsernameResponse {
+  username: string;
+  displayName: string | null;
+}
+
+export interface CheckUsernameResponse {
+  available: boolean;
+  username: string;
+}
+
+// Leaderboard API
+export interface LeaderboardEntry {
+  rank: number;
+  username: string;
+  displayName: string | null;
+  rating: number;
+  confirmedTier: string;
+  gamesPlayed: number;
+}
+
+export interface LeaderboardResponse {
+  leaderboard: LeaderboardEntry[];
+  playerRank: number | null;
+  totalRanked: number;
 }
 
 // Session token header name

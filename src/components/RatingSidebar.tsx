@@ -1,6 +1,9 @@
 "use client";
 
-import { getTier, getTierProgress } from "@/lib/tiers";
+import { getTier, getTierProgress, TIERS } from "@/lib/tiers";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
+import { useSessionContext } from "@/contexts/SessionContext";
+import { GoogleIcon } from "./GoogleIcon";
 import { TierIcon } from "./TierIcon";
 
 interface SessionEntry {
@@ -10,6 +13,7 @@ interface SessionEntry {
 
 interface RatingSidebarProps {
   rating?: number;
+  confirmedTier?: string;
   lastChange?: number | null;
   problemRating?: number;
   /** Source/number for AoPS link (only passed after submission). */
@@ -19,6 +23,8 @@ interface RatingSidebarProps {
   initialRating?: number | null;
   /** Array of attempt results for session history chart. */
   sessionHistory?: SessionEntry[];
+  /** Best combo this session (shown when >= 3). */
+  maxCombo?: number;
 }
 
 function getAopsUrl(source: string, sourceNumber: number): string {
@@ -148,15 +154,23 @@ function ResultArrows({ results }: { results: boolean[] }) {
 
 export function RatingSidebar({
   rating,
+  confirmedTier: confirmedTierName,
   lastChange,
   problemRating,
   source,
   sourceNumber,
   initialRating,
   sessionHistory = [],
+  maxCombo,
 }: RatingSidebarProps) {
+  const { user, signInWithGoogle } = useFirebaseAuth();
+  const { player } = useSessionContext();
+  const isAnonymous = !user && !player?.isAuthenticated;
   const currentRating = rating ?? 1500;
-  const tier = getTier(currentRating);
+  // Use confirmed tier for display, but live rating for progress bar
+  const tier = confirmedTierName
+    ? (TIERS.find((t) => t.name === confirmedTierName) ?? getTier(currentRating))
+    : getTier(currentRating);
   const progressPercent = getTierProgress(currentRating);
 
   const aopsUrl = source && sourceNumber ? getAopsUrl(source, sourceNumber) : null;
@@ -230,15 +244,22 @@ export function RatingSidebar({
             <SessionChart ratingPoints={ratingPoints} results={results} />
             <div className="flex items-center justify-between">
               <ResultArrows results={results} />
-              {(() => {
-                const delta = ratingPoints[ratingPoints.length - 1] - ratingPoints[0];
-                const isUp = delta >= 0;
-                return (
-                  <span className={`text-xs font-bold tabular-nums ${isUp ? "text-[var(--success)]" : "text-[var(--error)]"}`}>
-                    {isUp ? "+" : ""}{Math.round(delta)}
+              <div className="flex items-center gap-2">
+                {maxCombo != null && maxCombo >= 3 && (
+                  <span className="text-[10px] font-bold tabular-nums text-orange-400">
+                    {"\u26A1"}{maxCombo}
                   </span>
-                );
-              })()}
+                )}
+                {(() => {
+                  const delta = ratingPoints[ratingPoints.length - 1] - ratingPoints[0];
+                  const isUp = delta >= 0;
+                  return (
+                    <span className={`text-xs font-bold tabular-nums ${isUp ? "text-[var(--success)]" : "text-[var(--error)]"}`}>
+                      {isUp ? "+" : ""}{Math.round(delta)}
+                    </span>
+                  );
+                })()}
+              </div>
             </div>
           </div>
         ) : (
@@ -274,7 +295,7 @@ export function RatingSidebar({
                   href={aopsUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-lg bg-[var(--accent)] text-white font-medium hover:bg-[var(--accent-hover)] hover:scale-[1.01] transition-all duration-200"
+                  className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-lg bg-[var(--btn-primary)] text-[var(--btn-primary-text)] font-medium hover:bg-[var(--btn-primary-hover)] hover:scale-[1.01] transition-all duration-200"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -284,6 +305,31 @@ export function RatingSidebar({
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Sign-in nudge for anonymous users */}
+      {isAnonymous && (
+        <div
+          className="flex-1 rounded-xl border border-dashed border-[var(--accent)]/30 bg-[var(--accent)]/5 p-4 animate-slide-in-right stagger-4"
+          style={{ boxShadow: "var(--card-shadow)" }}
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <svg className="w-4 h-4 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+            </svg>
+            <span className="text-sm font-semibold text-[var(--accent)]">Save your progress</span>
+          </div>
+          <p className="text-xs text-[var(--muted)] mb-3">
+            Sign in to keep your rating across sessions and devices.
+          </p>
+          <button
+            onClick={signInWithGoogle}
+            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg border border-[var(--border)] text-xs font-medium hover:bg-[var(--border)]/30 transition-colors"
+          >
+            <GoogleIcon size={14} />
+            Sign in with Google
+          </button>
         </div>
       )}
     </div>

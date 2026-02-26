@@ -2,6 +2,10 @@
 
 import type { StatsResponse } from "@/types";
 import { getTier, getTierProgress, TIERS } from "@/lib/tiers";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
+import { DifficultyBreakdown } from "./DifficultyBreakdown";
+import { ActivityHeatmap } from "./ActivityHeatmap";
+import { GoogleIcon } from "./GoogleIcon";
 import { TierIcon } from "./TierIcon";
 
 interface StatsDisplayProps {
@@ -78,21 +82,16 @@ function RatingChart({ history }: { history: Array<{ rating: number; timestamp: 
 }
 
 export function StatsDisplay({ stats }: StatsDisplayProps) {
-  const { player, accuracy, ratingHistory, recentAttempts } = stats;
-  const tier = getTier(player.rating);
+  const { player, accuracy, ratingHistory, recentAttempts, difficultyBreakdown, activityHeatmap } = stats;
+  const { user, signInWithGoogle } = useFirebaseAuth();
+  // Use confirmed tier for display, live rating for progress bar
+  const tier = (player.tierName ? TIERS.find((t) => t.name === player.tierName) : null) ?? getTier(player.rating);
   const progress = getTierProgress(player.rating);
 
-  // Compute best streak
-  let bestStreak = 0;
-  let currentStreak = 0;
-  for (const attempt of [...recentAttempts].reverse()) {
-    if (attempt.correct) {
-      currentStreak++;
-      bestStreak = Math.max(bestStreak, currentStreak);
-    } else {
-      currentStreak = 0;
-    }
-  }
+  const memberSince = new Date(player.createdAt).toLocaleDateString("en-US", {
+    month: "short",
+    year: "numeric",
+  });
 
   return (
     <div className="flex flex-col lg:flex-row gap-6">
@@ -108,6 +107,9 @@ export function StatsDisplay({ stats }: StatsDisplayProps) {
               <TierIcon tier={tier.name} size={64} animate />
             </div>
             <div className="flex-1 min-w-0">
+              {player.username && (
+                <div className="text-sm font-medium text-[var(--muted)] mb-0.5">@{player.username}</div>
+              )}
               <div className="flex items-baseline gap-3">
                 <span className="text-4xl sm:text-5xl font-bold tabular-nums">
                   {Math.round(player.rating)}
@@ -133,7 +135,7 @@ export function StatsDisplay({ stats }: StatsDisplayProps) {
           </div>
         </div>
 
-        {/* Stat Cards */}
+        {/* Stat Cards — Row 1 */}
         <div className="grid grid-cols-3 gap-4">
           <div
             className="rounded-xl border border-[var(--accent)]/20 bg-[var(--accent)]/5 p-4 animate-fade-in-up stagger-1"
@@ -181,7 +183,53 @@ export function StatsDisplay({ stats }: StatsDisplayProps) {
                 Best Streak
               </div>
             </div>
-            <div className="text-3xl font-bold tabular-nums">{bestStreak}</div>
+            <div className="text-3xl font-bold tabular-nums">{player.bestStreak}</div>
+          </div>
+        </div>
+
+        {/* Stat Cards — Row 2 */}
+        <div className="grid grid-cols-3 gap-4">
+          <div
+            className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-4 animate-fade-in-up stagger-2"
+            style={{ boxShadow: "var(--card-shadow)" }}
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-8 h-8 rounded-lg bg-purple-500/15 flex items-center justify-center">
+                <svg className="w-4 h-4 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+              </div>
+              <div className="text-xs font-medium text-[var(--muted)] uppercase tracking-wider">
+                Peak
+              </div>
+            </div>
+            <div className="text-3xl font-bold tabular-nums">{Math.round(player.peakRating)}</div>
+          </div>
+          <div
+            className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-4 animate-fade-in-up stagger-3"
+            style={{ boxShadow: "var(--card-shadow)" }}
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-8 h-8 rounded-lg bg-cyan-500/15 flex items-center justify-center">
+                <svg className="w-4 h-4 text-cyan-500" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></svg>
+              </div>
+              <div className="text-xs font-medium text-[var(--muted)] uppercase tracking-wider">
+                Streak
+              </div>
+            </div>
+            <div className="text-3xl font-bold tabular-nums">{player.currentStreak}</div>
+          </div>
+          <div
+            className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-4 animate-fade-in-up stagger-4"
+            style={{ boxShadow: "var(--card-shadow)" }}
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-8 h-8 rounded-lg bg-[var(--border)]/50 flex items-center justify-center">
+                <svg className="w-4 h-4 text-[var(--muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+              </div>
+              <div className="text-xs font-medium text-[var(--muted)] uppercase tracking-wider">
+                Member
+              </div>
+            </div>
+            <div className="text-lg font-bold">{memberSince}</div>
           </div>
         </div>
 
@@ -204,6 +252,32 @@ export function StatsDisplay({ stats }: StatsDisplayProps) {
               <span>{Math.round(Math.min(...ratingHistory.map((h) => h.rating)))}</span>
               <span>{Math.round(Math.max(...ratingHistory.map((h) => h.rating)))}</span>
             </div>
+          </div>
+        )}
+
+        {/* Difficulty Breakdown */}
+        {difficultyBreakdown && (
+          <div
+            className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-4 sm:p-5 animate-fade-in-up stagger-5"
+            style={{ boxShadow: "var(--card-shadow)" }}
+          >
+            <div className="text-xs font-medium text-[var(--muted)] uppercase tracking-wider mb-3">
+              Difficulty Breakdown
+            </div>
+            <DifficultyBreakdown breakdown={difficultyBreakdown} />
+          </div>
+        )}
+
+        {/* Activity Heatmap (authenticated only) */}
+        {activityHeatmap && activityHeatmap.length > 0 && (
+          <div
+            className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-4 sm:p-5 animate-fade-in-up stagger-5"
+            style={{ boxShadow: "var(--card-shadow)" }}
+          >
+            <div className="text-xs font-medium text-[var(--muted)] uppercase tracking-wider mb-3">
+              Activity (Last 90 Days)
+            </div>
+            <ActivityHeatmap data={activityHeatmap} />
           </div>
         )}
 
@@ -254,6 +328,31 @@ export function StatsDisplay({ stats }: StatsDisplayProps) {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Sign-in nudge for anonymous users */}
+        {!user && !player.isAuthenticated && (
+          <div
+            className="rounded-xl border border-dashed border-[var(--accent)]/30 bg-[var(--accent)]/5 p-5 animate-fade-in-up"
+            style={{ boxShadow: "var(--card-shadow)" }}
+          >
+            <div className="flex items-center gap-3 mb-2">
+              <svg className="w-5 h-5 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+              </svg>
+              <span className="text-sm font-semibold text-[var(--accent)]">Want richer stats?</span>
+            </div>
+            <p className="text-xs text-[var(--muted)] mb-3">
+              Sign in to unlock activity heatmaps, save your progress across devices, and track your improvement over time.
+            </p>
+            <button
+              onClick={signInWithGoogle}
+              className="flex items-center justify-center gap-2 py-2 px-4 rounded-lg border border-[var(--border)] text-sm font-medium hover:bg-[var(--border)]/30 transition-colors"
+            >
+              <GoogleIcon size={16} />
+              Sign in with Google
+            </button>
           </div>
         )}
       </div>
