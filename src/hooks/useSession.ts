@@ -157,12 +157,41 @@ export function useSession() {
     [buildAuthHeaders, state.token]
   );
 
+  // Eager init for returning anonymous users — don't wait for Firebase SDK
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const storedToken = localStorage.getItem(STORAGE_KEY);
+    if (!storedToken) return;
+
+    fetch("/api/player", {
+      headers: { [SESSION_TOKEN_HEADER]: storedToken },
+    })
+      .then((res) => res.json())
+      .then((result: ApiResponse<PlayerResponse>) => {
+        if (result.success && result.data && !initialized.current) {
+          initialized.current = true;
+          lastFirebaseUid.current = null;
+          localStorage.setItem(STORAGE_KEY, result.data.sessionToken);
+          setState({
+            token: result.data.sessionToken,
+            player: result.data,
+            loading: false,
+            error: null,
+          });
+        }
+      })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Wait for Firebase auth to settle, then initialize session
   useEffect(() => {
     if (!firebaseLoading) {
+      // Already initialized eagerly and no Firebase user — skip
+      if (initialized.current && !firebaseUser) return;
       initSession();
     }
-  }, [firebaseLoading, initSession]);
+  }, [firebaseLoading, firebaseUser, initSession]);
 
   return {
     ...state,

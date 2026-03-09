@@ -9,7 +9,6 @@ import { RatingSidebar } from "@/components/RatingSidebar";
 import { ComboIndicator } from "@/components/ComboIndicator";
 import { TierUpCelebration, DemotionToast } from "@/components/TierUpCelebration";
 import { ReportButton } from "@/components/ReportButton";
-import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { useSessionContext } from "@/contexts/SessionContext";
 import type { ProblemResponse, AttemptResponse, ApiResponse, TierChange } from "@/types";
 
@@ -30,7 +29,6 @@ function checkAnswerClient(submitted: string, correct: string): boolean {
 }
 
 export default function PlayPage() {
-  const { user, signInWithGoogle } = useFirebaseAuth();
   const { player, loading: sessionLoading, error: sessionError, fetchWithSession, refreshPlayer, initSession } = useSessionContext();
   const [problem, setProblem] = useState<ProblemResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -56,9 +54,8 @@ export default function PlayPage() {
   // Tier change celebration/demotion toast
   const [tierChange, setTierChange] = useState<TierChange | null>(null);
 
-  // Sign-in nudge (every 5 attempts for anonymous users)
+  // Attempt counter
   const attemptCount = useRef(0);
-  const [showNudge, setShowNudge] = useState(false);
 
   // Prevent accidental double-click from Submit → Next Problem
   const lastSubmitTime = useRef(0);
@@ -130,6 +127,27 @@ export default function PlayPage() {
     }
   }, [fetchWithSession]);
 
+  // Eager problem pre-fetch for returning users (parallel with session init)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const token = localStorage.getItem("glickglick_session");
+    if (!token) return;
+
+    fetch("/api/problem/next", {
+      headers: { "x-session-token": token },
+    })
+      .then((res) => res.json())
+      .then((result: ApiResponse<ProblemResponse>) => {
+        if (result.success && result.data && !initialFetchDone.current) {
+          initialFetchDone.current = true;
+          setProblem(result.data);
+          setLoading(false);
+        }
+      })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     if (!sessionLoading && player && !initialFetchDone.current) {
       initialFetchDone.current = true;
@@ -190,11 +208,7 @@ export default function PlayPage() {
           setTierChange(result.data.tierChange);
         }
 
-        // Show sign-in nudge every 5 attempts for anonymous users
         attemptCount.current += 1;
-        if (!user && attemptCount.current % 5 === 0) {
-          setShowNudge(true);
-        }
 
         await refreshPlayer();
       } else {
@@ -270,30 +284,6 @@ export default function PlayPage() {
       )}
       {tierChange && !tierChange.promoted && (
         <DemotionToast tierChange={tierChange} onDismiss={() => setTierChange(null)} />
-      )}
-
-      {/* Sign-in nudge banner */}
-      {showNudge && (
-        <div className="mx-auto mt-3 max-w-xl w-full px-4 animate-fade-in-up">
-          <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg bg-[var(--accent)]/10 border border-[var(--accent)]/20">
-            <p className="text-sm text-[var(--foreground)]">
-              Nice session!{" "}
-              <button onClick={signInWithGoogle} className="font-semibold text-[var(--accent)] hover:underline">
-                Sign in
-              </button>{" "}
-              to keep your rating.
-            </p>
-            <button
-              onClick={() => setShowNudge(false)}
-              className="flex-shrink-0 p-1 rounded hover:bg-[var(--border)]/30 text-[var(--muted)] hover:text-[var(--foreground)] transition-colors"
-              aria-label="Dismiss"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        </div>
       )}
 
       <div className="flex-1 flex items-start justify-center px-4 sm:px-6 lg:px-8 py-8">
@@ -405,6 +395,7 @@ export default function PlayPage() {
               sourceNumber={submitted ? problem.sourceNumber : null}
               initialRating={startingRating}
               sessionHistory={sessionHistory}
+              combo={combo}
               maxCombo={maxCombo}
             />
           )}

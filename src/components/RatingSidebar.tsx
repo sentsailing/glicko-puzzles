@@ -23,6 +23,8 @@ interface RatingSidebarProps {
   initialRating?: number | null;
   /** Array of attempt results for session history chart. */
   sessionHistory?: SessionEntry[];
+  /** Current combo streak. */
+  combo?: number;
   /** Best combo this session (shown when >= 3). */
   maxCombo?: number;
 }
@@ -161,6 +163,7 @@ export function RatingSidebar({
   sourceNumber,
   initialRating,
   sessionHistory = [],
+  combo,
   maxCombo,
 }: RatingSidebarProps) {
   const { user, signInWithGoogle } = useFirebaseAuth();
@@ -210,6 +213,11 @@ export function RatingSidebar({
             >
               {lastChange >= 0 ? "+" : ""}
               {Math.round(lastChange)}
+            </span>
+          )}
+          {combo != null && combo >= 2 && (
+            <span className="text-base font-bold tabular-nums text-orange-400 ml-auto">
+              {"\u26A1"}\u00D7{combo}
             </span>
           )}
         </div>
