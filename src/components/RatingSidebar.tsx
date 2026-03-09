@@ -36,8 +36,8 @@ function getAopsUrl(source: string, sourceNumber: number): string {
 function SessionChart({ ratingPoints, results }: { ratingPoints: number[]; results: boolean[] }) {
   if (ratingPoints.length < 2) return null;
 
-  const W = 240;
-  const H = 90;
+  const W = 280;
+  const H = 110;
   const PAD_X = 6;
   const PAD_Y = 10;
 
@@ -66,7 +66,7 @@ function SessionChart({ ratingPoints, results }: { ratingPoints: number[]; resul
   const isUp = delta >= 0;
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: "90px" }}>
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: "110px" }}>
       <defs>
         <linearGradient id="sessionGrad" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={isUp ? "var(--success)" : "var(--error)"} stopOpacity={0.15} />
@@ -181,22 +181,30 @@ export function RatingSidebar({
   const results = sessionHistory.map((h) => h.correct);
 
   return (
-    <div className="flex flex-row lg:flex-col gap-3 lg:w-64">
+    <div className="flex flex-row lg:flex-col gap-4 lg:w-72">
       {/* Player Rating Card */}
       <div
-        className={`flex-1 rounded-xl border ${tier.border} ${tier.bg} p-4 animate-slide-in-right`}
+        className={`flex-1 rounded-xl border ${tier.border} ${tier.bg} p-5 animate-slide-in-right`}
         style={{ boxShadow: "var(--card-shadow)" }}
       >
-        <div className="text-xs font-medium text-[var(--muted)] uppercase tracking-wider mb-2">
-          Your Rating
+        <div className="flex items-center gap-3 mb-3">
+          <div
+            className={`${tier.color} tier-icon-glow`}
+            style={{ "--tier-glow": tier.hex } as React.CSSProperties}
+          >
+            <TierIcon tier={tier.name} size={40} animate />
+          </div>
+          <div className="flex-1 min-w-0">
+            <span className={`text-base font-bold ${tier.color}`}>{tier.name}</span>
+          </div>
         </div>
-        <div className="flex items-baseline gap-2">
-          <span className="text-3xl font-bold tabular-nums">
+        <div className="flex items-baseline gap-2.5">
+          <span className="text-4xl font-bold tabular-nums">
             {Math.round(currentRating)}
           </span>
           {lastChange != null && (
             <span
-              className={`text-lg font-bold tabular-nums ${
+              className={`text-xl font-bold tabular-nums ${
                 lastChange >= 0 ? "text-[var(--success)]" : "text-[var(--error)]"
               }`}
             >
@@ -205,17 +213,16 @@ export function RatingSidebar({
             </span>
           )}
         </div>
-        <div className={`flex items-center gap-1.5 mt-1`}>
-          <TierIcon tier={tier.name} size={16} className={tier.color} animate />
-          <span className={`text-sm font-semibold ${tier.color}`}>{tier.name}</span>
+        <div className="text-xs font-medium text-[var(--muted)] uppercase tracking-wider mt-1 mb-3">
+          ELO Rating
         </div>
         {/* Progress to next tier */}
-        <div className="mt-3">
-          <div className="flex justify-between text-[10px] text-[var(--muted)] mb-1 tabular-nums">
+        <div>
+          <div className="flex justify-between text-xs text-[var(--muted)] mb-1.5 tabular-nums">
             <span>{tier.threshold}</span>
             <span>{tier.nextThreshold}</span>
           </div>
-          <div className="h-1.5 rounded-full bg-[var(--border)] overflow-hidden">
+          <div className="h-2 rounded-full bg-[var(--border)] overflow-hidden">
             <div
               className={`h-full rounded-full ${tier.barColor} transition-all duration-700 ease-out`}
               style={{ width: `${progressPercent}%` }}
@@ -226,27 +233,27 @@ export function RatingSidebar({
 
       {/* Session History Card */}
       <div
-        className="flex-1 rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-4 animate-slide-in-right stagger-2"
+        className="flex-1 rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-5 animate-slide-in-right stagger-2"
         style={{ boxShadow: "var(--card-shadow)" }}
       >
-        <div className="flex items-center justify-between mb-2">
-          <div className="text-xs font-medium text-[var(--muted)] uppercase tracking-wider">
+        <div className="flex items-center justify-between mb-3">
+          <div className="text-sm font-medium text-[var(--muted)] uppercase tracking-wider">
             Session
           </div>
           {results.length > 0 && (
-            <div className="text-[10px] tabular-nums text-[var(--muted)]">
+            <div className="text-xs tabular-nums text-[var(--muted)]">
               {results.filter(Boolean).length}W {results.filter((r) => !r).length}L
             </div>
           )}
         </div>
         {ratingPoints.length >= 2 ? (
-          <div className="space-y-2">
+          <div className="space-y-3">
             <SessionChart ratingPoints={ratingPoints} results={results} />
             <div className="flex items-center justify-between">
               <ResultArrows results={results} />
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2.5">
                 {maxCombo != null && maxCombo >= 3 && (
-                  <span className="text-[10px] font-bold tabular-nums text-orange-400">
+                  <span className="text-xs font-bold tabular-nums text-orange-400">
                     {"\u26A1"}{maxCombo}
                   </span>
                 )}
@@ -254,7 +261,7 @@ export function RatingSidebar({
                   const delta = ratingPoints[ratingPoints.length - 1] - ratingPoints[0];
                   const isUp = delta >= 0;
                   return (
-                    <span className={`text-xs font-bold tabular-nums ${isUp ? "text-[var(--success)]" : "text-[var(--error)]"}`}>
+                    <span className={`text-sm font-bold tabular-nums ${isUp ? "text-[var(--success)]" : "text-[var(--error)]"}`}>
                       {isUp ? "+" : ""}{Math.round(delta)}
                     </span>
                   );
@@ -270,15 +277,15 @@ export function RatingSidebar({
       {/* Problem Detail Card */}
       {problemRating != null && (
         <div
-          className="flex-1 rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-4 animate-slide-in-right stagger-3"
+          className="flex-1 rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-5 animate-slide-in-right stagger-3"
           style={{ boxShadow: "var(--card-shadow)" }}
         >
-          <div className="text-xs font-medium text-[var(--muted)] uppercase tracking-wider mb-2">
+          <div className="text-sm font-medium text-[var(--muted)] uppercase tracking-wider mb-3">
             Problem Detail
           </div>
           <div className="flex items-baseline gap-2 mb-1">
-            <span className="text-xs text-[var(--muted)]">ELO</span>
-            <span className="text-2xl font-bold tabular-nums">
+            <span className="text-sm text-[var(--muted)]">ELO</span>
+            <span className="text-3xl font-bold tabular-nums">
               {Math.round(problemRating)}
             </span>
           </div>
@@ -286,7 +293,7 @@ export function RatingSidebar({
           {source && sourceNumber && (
             <div className="mt-3 pt-3 border-t border-[var(--border)]/50 space-y-3">
               <div>
-                <span className="px-2 py-1 text-xs font-medium rounded bg-[var(--border)]/50 text-[var(--muted)]">
+                <span className="px-2.5 py-1 text-sm font-medium rounded bg-[var(--border)]/50 text-[var(--muted)]">
                   {source} #{sourceNumber}
                 </span>
               </div>
@@ -311,23 +318,23 @@ export function RatingSidebar({
       {/* Sign-in nudge for anonymous users */}
       {isAnonymous && (
         <div
-          className="flex-1 rounded-xl border border-dashed border-[var(--accent)]/30 bg-[var(--accent)]/5 p-4 animate-slide-in-right stagger-4"
+          className="flex-1 rounded-xl border border-dashed border-[var(--accent)]/30 bg-[var(--accent)]/5 p-5 animate-slide-in-right stagger-4"
           style={{ boxShadow: "var(--card-shadow)" }}
         >
           <div className="flex items-center gap-2 mb-2">
-            <svg className="w-4 h-4 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg className="w-5 h-5 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
             </svg>
             <span className="text-sm font-semibold text-[var(--accent)]">Save your progress</span>
           </div>
-          <p className="text-xs text-[var(--muted)] mb-3">
+          <p className="text-sm text-[var(--muted)] mb-3">
             Sign in to keep your rating across sessions and devices.
           </p>
           <button
             onClick={signInWithGoogle}
-            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg border border-[var(--border)] text-xs font-medium hover:bg-[var(--border)]/30 transition-colors"
+            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg border border-[var(--border)] text-sm font-medium hover:bg-[var(--border)]/30 transition-colors"
           >
-            <GoogleIcon size={14} />
+            <GoogleIcon size={16} />
             Sign in with Google
           </button>
         </div>

@@ -1,3 +1,4 @@
+import "@/lib/env"; // Validate environment variables on first import
 import { PrismaClient } from "@prisma/client";
 
 /**

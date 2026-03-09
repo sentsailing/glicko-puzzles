@@ -41,7 +41,7 @@ export default function StatsPage() {
 
   if (sessionLoading) {
     return (
-      <main className="min-h-screen flex flex-col">
+      <main id="main-content" className="min-h-screen flex flex-col">
         <Header />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-[var(--muted)]">Loading session...</div>
@@ -51,7 +51,7 @@ export default function StatsPage() {
   }
 
   return (
-    <main className="min-h-screen flex flex-col">
+    <main id="main-content" className="min-h-screen flex flex-col">
       <Header />
 
       <div className="flex-1 px-4 py-8">

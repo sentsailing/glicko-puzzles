@@ -5,7 +5,7 @@ import { SESSION_TOKEN_HEADER } from "@/types";
 import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import type { PlayerResponse, ApiResponse } from "@/types";
 
-const STORAGE_KEY = "polypuzzle_session";
+const STORAGE_KEY = "glickglick_session";
 
 interface SessionState {
   token: string | null;

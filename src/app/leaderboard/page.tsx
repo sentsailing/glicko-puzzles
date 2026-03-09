@@ -115,7 +115,7 @@ export default function LeaderboardPage() {
   }, [fetchWithSession]);
 
   return (
-    <main className="min-h-screen flex flex-col">
+    <main id="main-content" className="min-h-screen flex flex-col">
       <Header />
 
       <div className="flex-1 flex flex-col items-center px-4 py-8 max-w-2xl mx-auto w-full">

@@ -1,13 +1,74 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getAdminAuth } from "@/lib/firebase-admin";
+import { checkRateLimit } from "@/lib/rate-limit";
+
+// ─── Admin Auth Helper ───────────────────────────────────────────
+
+const ADMIN_EMAILS =
+  process.env.ADMIN_EMAILS?.split(",").map((e) => e.trim().toLowerCase()) ?? [];
+
+async function verifyAdmin(
+  request: NextRequest
+): Promise<
+  | { authorized: true; email: string }
+  | { authorized: false; response: NextResponse }
+> {
+  const authHeader = request.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return {
+      authorized: false,
+      response: NextResponse.json(
+        { success: false, error: "Missing or invalid Authorization header" },
+        { status: 401 }
+      ),
+    };
+  }
+
+  const idToken = authHeader.slice(7);
+
+  let decoded;
+  try {
+    decoded = await getAdminAuth().verifyIdToken(idToken);
+  } catch {
+    return {
+      authorized: false,
+      response: NextResponse.json(
+        { success: false, error: "Invalid or expired token" },
+        { status: 401 }
+      ),
+    };
+  }
+
+  const email = decoded.email?.toLowerCase();
+  if (!email || !ADMIN_EMAILS.includes(email)) {
+    return {
+      authorized: false,
+      response: NextResponse.json(
+        { success: false, error: "Forbidden: not an admin" },
+        { status: 403 }
+      ),
+    };
+  }
+
+  return { authorized: true, email };
+}
 
 /**
  * GET /api/admin?tab=...
  *
  * Admin API — returns data for each dashboard tab.
- * No auth required (local-only tool).
+ * Requires admin authentication via Firebase ID token.
  */
 export async function GET(request: NextRequest) {
+  // Rate limit
+  const rateLimited = checkRateLimit(request, { limit: 30 });
+  if (rateLimited) return rateLimited;
+
+  // Auth guard
+  const auth = await verifyAdmin(request);
+  if (!auth.authorized) return auth.response;
+
   const tab = request.nextUrl.searchParams.get("tab") ?? "overview";
 
   try {
@@ -44,8 +105,17 @@ export async function GET(request: NextRequest) {
  * POST /api/admin
  *
  * Admin mutations — toggle exclusion, update problems, manage players/reports.
+ * Requires admin authentication via Firebase ID token.
  */
 export async function POST(request: NextRequest) {
+  // Rate limit
+  const rateLimited = checkRateLimit(request, { limit: 30 });
+  if (rateLimited) return rateLimited;
+
+  // Auth guard
+  const auth = await verifyAdmin(request);
+  if (!auth.authorized) return auth.response;
+
   try {
     const body = await request.json();
     const { action } = body;

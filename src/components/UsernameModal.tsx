@@ -117,7 +117,7 @@ export function UsernameModal({ fetchWithSession, onComplete }: UsernameModalPro
           <div className="tier-icon-glow mb-3" style={{ "--tier-glow": "#f43f5e" } as React.CSSProperties}>
             <TierIcon tier="Dodecahedron" size={48} className="text-rose-500" animate />
           </div>
-          <h2 className="text-2xl font-bold">Welcome to PolyPuzzle!</h2>
+          <h2 className="text-2xl font-bold">Welcome to GLICKGLICK!</h2>
           <p className="text-sm text-[var(--muted)] mt-1">
             Choose a username to get started
           </p>

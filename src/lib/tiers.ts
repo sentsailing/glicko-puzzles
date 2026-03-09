@@ -18,7 +18,7 @@ export interface Tier {
 
 export const TIERS: Tier[] = [
   { name: "Tetrahedron",          threshold: 0,    nextThreshold: 800,  color: "text-stone-500",    bg: "bg-stone-500/10",    border: "border-stone-500/30",    barColor: "bg-stone-500",    hex: "#78716c" },
-  { name: "Square Pyramid",       threshold: 800,  nextThreshold: 1000, color: "text-amber-500",    bg: "bg-amber-500/10",    border: "border-amber-500/30",    barColor: "bg-amber-500",    hex: "#f59e0b" },
+  { name: "Square Pyramid",       threshold: 800,  nextThreshold: 1000, color: "text-amber-700",    bg: "bg-amber-700/10",    border: "border-amber-700/30",    barColor: "bg-amber-700",    hex: "#b45309" },
   { name: "Cube",                 threshold: 1000, nextThreshold: 1200, color: "text-orange-500",   bg: "bg-orange-500/10",   border: "border-orange-500/30",   barColor: "bg-orange-500",   hex: "#f97316" },
   { name: "Pentagonal Prism",     threshold: 1200, nextThreshold: 1400, color: "text-yellow-500",   bg: "bg-yellow-500/10",   border: "border-yellow-500/30",   barColor: "bg-yellow-500",   hex: "#eab308" },
   { name: "Octahedron",           threshold: 1400, nextThreshold: 1600, color: "text-emerald-500",  bg: "bg-emerald-500/10",  border: "border-emerald-500/30",  barColor: "bg-emerald-500",  hex: "#10b981" },

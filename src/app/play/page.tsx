@@ -232,7 +232,7 @@ export default function PlayPage() {
 
   if (sessionLoading) {
     return (
-      <main className="min-h-screen flex flex-col">
+      <main id="main-content" className="min-h-screen flex flex-col">
         <Header />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-[var(--muted)]">Loading session...</div>
@@ -243,7 +243,7 @@ export default function PlayPage() {
 
   if (sessionError) {
     return (
-      <main className="min-h-screen flex flex-col">
+      <main id="main-content" className="min-h-screen flex flex-col">
         <Header />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center space-y-4">
@@ -261,7 +261,7 @@ export default function PlayPage() {
   }
 
   return (
-    <main className="min-h-screen flex flex-col">
+    <main id="main-content" className="min-h-screen flex flex-col">
       <Header />
 
       {/* Tier change celebration / demotion toast */}

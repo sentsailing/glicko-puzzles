@@ -6,8 +6,8 @@
 :root {
   --foreground: #171717;
   --background: #ffffff;
-  --accent: #8b5cf6;
-  --accent-hover: #7c3aed;
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
   --success: #16a34a;
   --error: #dc2626;
   --muted: #6b7280;
@@ -23,8 +23,8 @@
 html.dark {
   --foreground: #ededed;
   --background: #0a0a0a;
-  --accent: #a78bfa;
-  --accent-hover: #c4b5fd;
+  --accent: #60a5fa;
+  --accent-hover: #93c5fd;
   --success: #22c55e;
   --error: #ef4444;
   --muted: #9ca3af;
@@ -131,10 +131,10 @@ html.dark .problem-diagram svg {
 
 @keyframes pulseSubtle {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(139, 92, 246, 0);
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0);
   }
   50% {
-    box-shadow: 0 0 0 6px rgba(139, 92, 246, 0.15);
+    box-shadow: 0 0 0 6px rgba(37, 99, 235, 0.15);
   }
 }
 

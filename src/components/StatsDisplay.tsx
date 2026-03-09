@@ -190,12 +190,12 @@ export function StatsDisplay({ stats }: StatsDisplayProps) {
         {/* Stat Cards — Row 2 */}
         <div className="grid grid-cols-3 gap-4">
           <div
-            className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-4 animate-fade-in-up stagger-2"
+            className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-4 animate-fade-in-up stagger-2"
             style={{ boxShadow: "var(--card-shadow)" }}
           >
             <div className="flex items-center gap-2 mb-2">
-              <div className="w-8 h-8 rounded-lg bg-purple-500/15 flex items-center justify-center">
-                <svg className="w-4 h-4 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+              <div className="w-8 h-8 rounded-lg bg-blue-500/15 flex items-center justify-center">
+                <svg className="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
               </div>
               <div className="text-xs font-medium text-[var(--muted)] uppercase tracking-wider">
                 Peak

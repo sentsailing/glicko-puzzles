@@ -33,11 +33,24 @@ function renderContent(input: string): string {
         /^\[diagram\]([\s\S]*?)\[\/diagram\]$/
       );
       if (diagramMatch) {
-        return `<div class="problem-diagram">${diagramMatch[1]}</div>`;
+        return `<div class="problem-diagram">${sanitizeSvg(diagramMatch[1])}</div>`;
       }
       return processLatex(part);
     })
     .join("");
+}
+
+/** Sanitize SVG/HTML content to prevent XSS while allowing safe SVG markup. */
+function sanitizeSvg(html: string): string {
+  return html
+    // Remove script tags and contents
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    // Remove dangerous tags (keep their content)
+    .replace(/<\/?(iframe|object|embed|form|input|textarea|button|link|meta|base)[^>]*>/gi, "")
+    // Remove event handler attributes
+    .replace(/\s+on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, "")
+    // Remove javascript: URLs
+    .replace(/(href|xlink:href)\s*=\s*(?:"javascript:[^"]*"|'javascript:[^']*')/gi, "$1=\"\"");
 }
 
 /** Convert LaTeX commands that KaTeX doesn't fully support to equivalents it does. */

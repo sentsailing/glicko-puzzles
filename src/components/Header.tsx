@@ -41,7 +41,7 @@ export function Header() {
           className="flex items-center gap-2 px-4 py-1.5 rounded-full hover:bg-[var(--border)]/30 transition-colors"
         >
           <TierIcon tier="Octahedron" size={22} className="text-[var(--accent)]" />
-          <span className="text-base font-bold tracking-tight">PolyPuzzle</span>
+          <span className="text-base font-bold tracking-tight">GLICKGLICK</span>
         </Link>
 
         <div className="w-px h-5 bg-[var(--border)]/50 mx-1.5" />
@@ -75,7 +75,7 @@ export function Header() {
               : "text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--border)]/30"
           }`}
         >
-          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
           </svg>
           <span className="hidden sm:inline">Leaderboard</span>
@@ -109,6 +109,8 @@ export function Header() {
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setDropdownOpen((o) => !o)}
+                aria-label="User menu"
+                aria-expanded={dropdownOpen}
                 className="flex items-center gap-2 px-3 py-1.5 rounded-full text-base hover:bg-[var(--border)]/30 transition-colors"
               >
                 <span className="max-w-[120px] truncate text-sm font-medium">

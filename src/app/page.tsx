@@ -1,22 +1,27 @@
+import type { Metadata } from "next";
 import { Header } from "@/components/Header";
 import { HeroCTA } from "@/components/HeroCTA";
 import { TierIcon } from "@/components/TierIcon";
 import { TIERS } from "@/lib/tiers";
 
+export const metadata: Metadata = {
+  title: "GLICKGLICK — Rating-Based Math Practice",
+};
+
 export default function HomePage() {
   return (
-    <main className="min-h-screen flex flex-col">
+    <main id="main-content" className="min-h-screen flex flex-col">
       <Header />
 
       <div className="flex-1 flex flex-col items-center justify-center px-4 py-12">
         {/* Hero */}
         <div className="text-center max-w-lg mb-12 animate-fade-in-up">
           <div className="flex justify-center mb-5">
-            <div className="tier-icon-glow" style={{ "--tier-glow": "#7c3aed" } as React.CSSProperties}>
-              <TierIcon tier="Icosahedron" size={72} className="text-violet-600" animate />
+            <div className="tier-icon-glow" style={{ "--tier-glow": "#2563eb" } as React.CSSProperties}>
+              <TierIcon tier="Icosahedron" size={72} className="text-blue-600" animate />
             </div>
           </div>
-          <h1 className="text-5xl font-bold mb-3 tracking-tight">PolyPuzzle</h1>
+          <h1 className="text-5xl font-bold mb-3 tracking-tight">GLICKGLICK</h1>
           <p className="text-lg text-[var(--muted)] mb-8">
             Puzzles have ratings too. Can you beat them?
           </p>
@@ -46,7 +51,7 @@ export default function HomePage() {
                     className={`
                       relative flex items-center gap-4 px-5 py-3 rounded-xl border transition-all
                       ${isTop
-                        ? `${tier.bg} ${tier.border} border shadow-lg shadow-violet-600/10`
+                        ? `${tier.bg} ${tier.border} border shadow-lg shadow-blue-600/10`
                         : isBottom
                         ? "border-transparent opacity-60"
                         : `border-[var(--border)]/40 hover:${tier.bg} hover:border-[var(--border)]`
