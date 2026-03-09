@@ -9,7 +9,7 @@ import { getTier } from "@/lib/tiers";
 
 // ─── Types ───────────────────────────────────────────────────────
 
-type Tab = "overview" | "problems" | "reports" | "players" | "health";
+type Tab = "overview" | "problems" | "reports" | "players" | "health" | "triage";
 
 interface OverviewData {
   totalProblems: number;
@@ -141,11 +141,31 @@ interface HealthData {
   }>;
 }
 
+interface TriageProblem {
+  id: string;
+  content: string;
+  answer: string;
+  answerType: "FREE_RESPONSE" | "MULTIPLE_CHOICE";
+  choices: string[];
+  rating: number;
+  difficulty: string;
+  source: string | null;
+  sourceNumber: number | null;
+  excluded: boolean;
+  reports: Array<{
+    id: string;
+    type: string;
+    details: string | null;
+    createdAt: string;
+  }>;
+}
+
 // ─── Main Page ───────────────────────────────────────────────────
 
 export default function AdminPage() {
-  const [activeTab, setActiveTab] = useState<Tab>("overview");
+  const [activeTab, setActiveTab] = useState<Tab>("triage");
   const [reportCount, setReportCount] = useState<number | null>(null);
+  const [triageCount, setTriageCount] = useState<number | null>(null);
 
   // Fetch report count for badge
   useEffect(() => {
@@ -155,9 +175,16 @@ export default function AdminPage() {
         if (d.success) setReportCount(d.data.totalCount);
       })
       .catch(() => {});
+    fetch("/api/admin?tab=triage")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success) setTriageCount(d.data.totalCount);
+      })
+      .catch(() => {});
   }, []);
 
   const tabs: { key: Tab; label: string; badge?: number | null }[] = [
+    { key: "triage", label: "Triage", badge: triageCount },
     { key: "overview", label: "Overview" },
     { key: "problems", label: "Problems" },
     { key: "reports", label: "Reports", badge: reportCount },
@@ -200,6 +227,7 @@ export default function AdminPage() {
 
       {/* Content */}
       <div className="flex-1 max-w-7xl mx-auto w-full px-4 py-6">
+        {activeTab === "triage" && <TriageTab />}
         {activeTab === "overview" && <OverviewTab />}
         {activeTab === "problems" && <ProblemsTab />}
         {activeTab === "reports" && <ReportsTab />}
@@ -207,6 +235,341 @@ export default function AdminPage() {
         {activeTab === "health" && <HealthTab />}
       </div>
     </main>
+  );
+}
+
+// ─── Triage Tab ─────────────────────────────────────────────────
+
+function TriageTab() {
+  const [queue, setQueue] = useState<TriageProblem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [editContent, setEditContent] = useState("");
+  const [editAnswer, setEditAnswer] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [confirmMode, setConfirmMode] = useState<null | {
+    content: string;
+    answer: string;
+    answerType: string;
+    choices: string[];
+    source: string | null;
+    sourceNumber: number | null;
+  }>(null);
+
+  const fetchQueue = useCallback(async () => {
+    const res = await fetch("/api/admin?tab=triage");
+    const d = await res.json();
+    if (d.success) {
+      setQueue(d.data.problems);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchQueue().finally(() => setLoading(false));
+  }, [fetchQueue]);
+
+  const current = queue[currentIndex] ?? null;
+
+  // Sync edit fields when current problem changes
+  useEffect(() => {
+    if (current) {
+      setEditContent(current.content);
+      setEditAnswer(current.answer);
+      setConfirmMode(null);
+    }
+  }, [current]);
+
+  const adminPost = async (body: Record<string, unknown>) => {
+    const res = await fetch("/api/admin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    return res.json();
+  };
+
+  const advance = () => {
+    // Remove current problem from queue since it's been resolved
+    setQueue((prev) => prev.filter((_, i) => i !== currentIndex));
+    // If we were at the end, go back
+    if (currentIndex >= queue.length - 1) {
+      setCurrentIndex(Math.max(0, queue.length - 2));
+    }
+    setConfirmMode(null);
+  };
+
+  const skip = () => {
+    if (currentIndex < queue.length - 1) {
+      setCurrentIndex(currentIndex + 1);
+    }
+  };
+
+  const handleSaveAndNext = async () => {
+    if (!current) return;
+    setSaving(true);
+    try {
+      const body: Record<string, unknown> = {
+        action: "triageResolve",
+        problemId: current.id,
+        dismiss: true,
+      };
+      if (editContent !== current.content) body.content = editContent;
+      if (editAnswer !== current.answer) body.answer = editAnswer;
+      const d = await adminPost(body);
+      if (d.success && d.data) {
+        setConfirmMode({
+          content: d.data.content,
+          answer: d.data.answer,
+          answerType: d.data.answerType,
+          choices: d.data.choices,
+          source: current.source,
+          sourceNumber: current.sourceNumber,
+        });
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleExcludeAndNext = async () => {
+    if (!current) return;
+    setSaving(true);
+    try {
+      await adminPost({ action: "toggleExclude", problemId: current.id });
+      await adminPost({ action: "triageResolve", problemId: current.id, dismiss: true });
+      advance();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDismissReports = async () => {
+    if (!current) return;
+    setSaving(true);
+    try {
+      await adminPost({ action: "triageResolve", problemId: current.id, dismiss: true });
+      advance();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) return <Loading />;
+
+  if (queue.length === 0) {
+    return (
+      <div className="text-center py-20">
+        <div className="text-4xl mb-4">All clear</div>
+        <div className="text-[var(--muted)] text-lg">No problems need triage</div>
+      </div>
+    );
+  }
+
+  if (!current) {
+    return (
+      <div className="text-center py-20">
+        <div className="text-4xl mb-4">Done</div>
+        <div className="text-[var(--muted)] text-lg">You have triaged all problems in the queue</div>
+      </div>
+    );
+  }
+
+  // Confirmation screen after Save & Next
+  if (confirmMode) {
+    return (
+      <div className="max-w-3xl mx-auto space-y-6">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold mb-1">Review Saved Changes</h2>
+          <p className="text-sm text-[var(--muted)]">
+            {confirmMode.source} #{confirmMode.sourceNumber} — updated and reports dismissed
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-green-500/30 bg-[var(--card-bg)] p-6" style={{ boxShadow: "var(--card-shadow)" }}>
+          <Problem content={confirmMode.content} source={confirmMode.source} sourceNumber={confirmMode.sourceNumber} />
+          {confirmMode.answerType === "MULTIPLE_CHOICE" && confirmMode.choices.length > 0 && (
+            <div className="mt-4">
+              <MultipleChoiceForm
+                choices={confirmMode.choices}
+                onSubmit={async () => {}}
+                resultMode={{ correctAnswer: confirmMode.answer, userAnswer: "" }}
+              />
+            </div>
+          )}
+          {confirmMode.answerType === "FREE_RESPONSE" && (
+            <div className="mt-4 px-4 py-2 rounded-lg bg-green-500/10 border border-green-500/30 text-sm">
+              Answer: <span className="font-bold">{confirmMode.answer}</span>
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-3 justify-center">
+          <button
+            onClick={() => advance()}
+            className="px-6 py-2.5 text-sm font-medium rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors"
+          >
+            Looks Good
+          </button>
+          <button
+            onClick={() => setConfirmMode(null)}
+            className="px-6 py-2.5 text-sm font-medium rounded-lg border border-[var(--border)] hover:bg-[var(--border)]/30 transition-colors"
+          >
+            Edit More
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const aopsUrl = current.source && current.sourceNumber
+    ? `https://artofproblemsolving.com/wiki/index.php/${current.source.replace(/ /g, "_")}_Problems/Problem_${current.sourceNumber}`
+    : null;
+
+  return (
+    <div className="max-w-3xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-semibold">
+          Problem Triage
+          <span className="text-[var(--muted)] font-normal ml-2 text-base">
+            ({queue.length} remaining)
+          </span>
+        </h2>
+        <div className="text-sm text-[var(--muted)]">
+          {currentIndex + 1} / {queue.length}
+        </div>
+      </div>
+
+      {/* Report badges */}
+      <div className="flex flex-wrap gap-2">
+        {current.reports.map((r) => (
+          <div
+            key={r.id}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm ${
+              r.type === "WRONG_ANSWER"
+                ? "bg-red-500/10 border border-red-500/30 text-red-500"
+                : r.type === "FORMATTING"
+                ? "bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400"
+                : "bg-blue-500/10 border border-blue-500/30 text-blue-500"
+            }`}
+          >
+            <span className="font-bold text-xs">{r.type}</span>
+            {r.details && <span className="text-xs opacity-80">— {r.details}</span>}
+            <span className="text-[10px] opacity-50">{timeAgo(r.createdAt)}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Problem info bar */}
+      <div className="flex items-center gap-2 flex-wrap text-xs">
+        <Tag label={current.difficulty} />
+        <Tag label={current.answerType === "MULTIPLE_CHOICE" ? "MC" : "FR"} />
+        <Tag label={`ELO: ${Math.round(current.rating)}`} />
+        <Tag label={`Answer: ${current.answer}`} accent />
+        {current.source && (
+          <Tag label={`${current.source} #${current.sourceNumber}`} />
+        )}
+        {current.excluded && (
+          <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-amber-500/20 text-amber-600 dark:text-amber-400">
+            EXCLUDED
+          </span>
+        )}
+        {aopsUrl && (
+          <a
+            href={aopsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-2 py-0.5 rounded text-xs font-medium bg-[var(--border)]/50 text-[var(--accent)] hover:underline"
+          >
+            AoPS
+          </a>
+        )}
+      </div>
+
+      {/* Rendered problem preview */}
+      <div
+        className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-6"
+        style={{ boxShadow: "var(--card-shadow)" }}
+      >
+        <Problem content={editContent} source={current.source} sourceNumber={current.sourceNumber} />
+        {current.answerType === "MULTIPLE_CHOICE" && current.choices.length > 0 && (
+          <div className="mt-4">
+            <MultipleChoiceForm
+              choices={current.choices}
+              onSubmit={async () => {}}
+              resultMode={{ correctAnswer: editAnswer || current.answer, userAnswer: "" }}
+            />
+          </div>
+        )}
+        {current.answerType === "FREE_RESPONSE" && (
+          <div className="mt-4 px-4 py-2 rounded-lg bg-green-500/10 border border-green-500/30 text-sm">
+            Answer: <span className="font-bold">{editAnswer}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Edit area */}
+      <div
+        className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-5 space-y-4"
+        style={{ boxShadow: "var(--card-shadow)" }}
+      >
+        <div className="text-xs font-medium text-[var(--muted)] uppercase tracking-wider">
+          Edit Problem
+        </div>
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs text-[var(--muted)] mb-1">Content (raw LaTeX)</label>
+            <textarea
+              value={editContent}
+              onChange={(e) => setEditContent(e.target.value)}
+              rows={8}
+              className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] font-mono resize-y placeholder:text-[var(--muted)]"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-[var(--muted)] mb-1">Answer</label>
+            <input
+              type="text"
+              value={editAnswer}
+              onChange={(e) => setEditAnswer(e.target.value)}
+              className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] font-mono"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Action buttons */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <button
+          onClick={handleSaveAndNext}
+          disabled={saving}
+          className="px-5 py-2.5 text-sm font-medium rounded-lg bg-[var(--btn-primary)] text-[var(--btn-primary-text)] hover:bg-[var(--btn-primary-hover)] transition-colors disabled:opacity-50"
+        >
+          {saving ? "Saving..." : "Save & Next"}
+        </button>
+        <button
+          onClick={handleExcludeAndNext}
+          disabled={saving}
+          className="px-5 py-2.5 text-sm font-medium rounded-lg border border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 transition-colors disabled:opacity-50"
+        >
+          Exclude & Next
+        </button>
+        <button
+          onClick={skip}
+          disabled={saving || currentIndex >= queue.length - 1}
+          className="px-5 py-2.5 text-sm font-medium rounded-lg border border-[var(--border)] text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--border)]/30 transition-colors disabled:opacity-50"
+        >
+          Skip
+        </button>
+        <button
+          onClick={handleDismissReports}
+          disabled={saving}
+          className="px-5 py-2.5 text-sm font-medium rounded-lg border border-red-500/30 text-red-500 hover:bg-red-500/10 transition-colors disabled:opacity-50 ml-auto"
+        >
+          Dismiss Reports
+        </button>
+      </div>
+    </div>
   );
 }
 

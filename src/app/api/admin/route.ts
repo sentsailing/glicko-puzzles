@@ -86,6 +86,8 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ success: true, data: await getPlayers() });
       case "health":
         return NextResponse.json({ success: true, data: await getHealth() });
+      case "triage":
+        return NextResponse.json({ success: true, data: await getTriage() });
       default:
         return NextResponse.json(
           { success: false, error: `Unknown tab: ${tab}` },
@@ -156,6 +158,26 @@ export async function POST(request: NextRequest) {
         });
         await prisma.attempt.deleteMany({ where: { playerId } });
         return NextResponse.json({ success: true });
+      }
+      case "triageResolve": {
+        const { problemId, content, answer, dismiss } = body;
+        if (!problemId) {
+          return NextResponse.json({ success: false, error: "problemId is required" }, { status: 400 });
+        }
+        const updateData: Record<string, string> = {};
+        if (content !== undefined) updateData.content = content;
+        if (answer !== undefined) updateData.answer = answer;
+        if (Object.keys(updateData).length > 0) {
+          await prisma.problem.update({ where: { id: problemId }, data: updateData });
+        }
+        if (dismiss) {
+          await prisma.report.deleteMany({ where: { problemId } });
+        }
+        const updatedProblem = await prisma.problem.findUnique({
+          where: { id: problemId },
+          select: { id: true, content: true, answer: true, answerType: true, choices: true },
+        });
+        return NextResponse.json({ success: true, data: updatedProblem });
       }
       case "deleteReport": {
         const { reportId } = body;
@@ -598,6 +620,53 @@ async function getHealth() {
     highAccuracy,
     drifted,
     mostReported,
+  };
+}
+
+// ─── Triage ──────────────────────────────────────────────────────
+
+async function getTriage() {
+  // Get all problems that have at least one report, grouped by problem, ordered by most reports first
+  const problemsWithReports = await prisma.problem.findMany({
+    where: {
+      reports: { some: {} },
+    },
+    include: {
+      reports: {
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          type: true,
+          details: true,
+          createdAt: true,
+        },
+      },
+    },
+    orderBy: {
+      reports: { _count: "desc" },
+    },
+  });
+
+  return {
+    problems: problemsWithReports.map((p) => ({
+      id: p.id,
+      content: p.content,
+      answer: p.answer,
+      answerType: p.answerType,
+      choices: p.choices,
+      rating: p.rating,
+      difficulty: p.difficulty,
+      source: p.source,
+      sourceNumber: p.sourceNumber,
+      excluded: p.excluded || isProblemExcluded(p.content),
+      reports: p.reports.map((r) => ({
+        id: r.id,
+        type: r.type,
+        details: r.details,
+        createdAt: r.createdAt.toISOString(),
+      })),
+    })),
+    totalCount: problemsWithReports.length,
   };
 }
 
