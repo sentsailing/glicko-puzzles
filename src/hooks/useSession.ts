@@ -26,16 +26,14 @@ export function useSession() {
   const initialized = useRef(false);
   // Track the current Firebase user identity to detect auth changes
   const lastFirebaseUid = useRef<string | null | undefined>(undefined);
-  // Refs for stable callbacks (avoids re-creating buildAuthHeaders/fetchWithSession)
-  const firebaseUserRef = useRef(firebaseUser);
+  // Ref for token so fetchWithSession/refreshPlayer don't re-create on token change
   const tokenRef = useRef(state.token);
 
-  useEffect(() => { firebaseUserRef.current = firebaseUser; }, [firebaseUser]);
   useEffect(() => { tokenRef.current = state.token; }, [state.token]);
 
-  // Build auth headers — stable callback, reads refs
+  // Build auth headers for the current auth mode
   const buildAuthHeaders = useCallback(async (): Promise<Record<string, string>> => {
-    if (firebaseUserRef.current) {
+    if (firebaseUser) {
       const idToken = await getIdToken();
       if (idToken) {
         return { Authorization: `Bearer ${idToken}` };
@@ -49,7 +47,7 @@ export function useSession() {
     }
 
     return {};
-  }, [getIdToken]);
+  }, [firebaseUser, getIdToken]);
 
   // Initialize session from Firebase or localStorage
   const initSession = useCallback(async () => {

@@ -5,7 +5,6 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -44,12 +43,6 @@ export function FirebaseAuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [signInError, setSignInError] = useState<string | null>(null);
-  const userRef = useRef<User | null>(null);
-
-  // Keep ref in sync so getIdToken always sees latest user without re-creating
-  useEffect(() => {
-    userRef.current = user;
-  }, [user]);
 
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
@@ -100,10 +93,9 @@ export function FirebaseAuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const getIdToken = useCallback(async (): Promise<string | null> => {
-    const u = userRef.current;
-    if (!u) return null;
-    return u.getIdToken();
-  }, []);
+    if (!user) return null;
+    return user.getIdToken();
+  }, [user]);
 
   return (
     <FirebaseAuthContext.Provider
