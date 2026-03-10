@@ -10,7 +10,7 @@ import { GoogleIcon } from "./GoogleIcon";
 import { TierIcon } from "./TierIcon";
 
 export function Header() {
-  const { user, loading, signInWithGoogle, signOut } = useFirebaseAuth();
+  const { user, loading, signInError, signInWithGoogle, signOut } = useFirebaseAuth();
   const { player } = useSessionContext();
   const { theme, toggleTheme } = useTheme();
   const pathname = usePathname();
@@ -146,13 +146,20 @@ export function Header() {
               )}
             </div>
           ) : (
-            <button
-              onClick={signInWithGoogle}
-              className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-[var(--accent)] text-white text-sm font-medium hover:bg-[var(--accent-hover)] transition-colors shadow-sm"
-            >
-              <GoogleIcon size={16} />
-              Sign in
-            </button>
+            <div className="relative">
+              <button
+                onClick={signInWithGoogle}
+                className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-[var(--accent)] text-white text-sm font-medium hover:bg-[var(--accent-hover)] transition-colors shadow-sm"
+              >
+                <GoogleIcon size={16} />
+                Sign in
+              </button>
+              {signInError && (
+                <div className="absolute right-0 top-full mt-2 w-64 p-3 rounded-lg border border-red-500/50 bg-[var(--background)] text-xs text-red-400 shadow-lg z-50">
+                  {signInError}
+                </div>
+              )}
+            </div>
           )
         )}
       </nav>

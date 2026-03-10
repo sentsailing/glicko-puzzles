@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { FirebaseAuthProvider } from "@/contexts/FirebaseAuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { SessionProvider } from "@/contexts/SessionContext";
@@ -51,10 +53,19 @@ export default function RootLayout({
         <ThemeProvider>
           <FirebaseAuthProvider>
             <SessionProvider>
-              <UsernameGate>{children}</UsernameGate>
+              <UsernameGate>
+                {children}
+                <footer className="py-6 text-center text-xs text-[var(--muted)]">
+                  <a href="/privacy" className="hover:text-[var(--foreground)] transition-colors">
+                    Privacy Policy
+                  </a>
+                </footer>
+              </UsernameGate>
             </SessionProvider>
           </FirebaseAuthProvider>
         </ThemeProvider>
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

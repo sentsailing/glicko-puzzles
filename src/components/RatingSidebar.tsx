@@ -187,9 +187,12 @@ export function RatingSidebar({
     <div className="flex flex-row lg:flex-col gap-4 lg:w-72">
       {/* Player Rating Card */}
       <div
-        className={`flex-1 rounded-xl border ${tier.border} ${tier.bg} p-5 animate-slide-in-right`}
+        className={`relative flex-1 rounded-xl border ${tier.border} ${tier.bg} p-5 animate-slide-in-right group/rating`}
         style={{ boxShadow: "var(--card-shadow)" }}
       >
+        <div className="pointer-events-none absolute left-full ml-2 top-0 w-52 rounded-lg border border-[var(--border)] bg-[var(--background)] p-3 text-xs text-[var(--muted)] shadow-lg opacity-0 group-hover/rating:opacity-100 transition-opacity duration-200 z-50">
+          Your tier updates after 3 consecutive problems at a new tier level. This prevents flickering when you&apos;re right at a boundary.
+        </div>
         <div className="flex items-center gap-3 mb-3">
           <div
             className={`${tier.color} tier-icon-glow`}
@@ -217,7 +220,7 @@ export function RatingSidebar({
           )}
           {combo != null && combo >= 2 && (
             <span className="text-base font-bold tabular-nums text-orange-400 ml-auto">
-              {"\u26A1"}\u00D7{combo}
+              {"\u26A1\u00D7"}{combo}
             </span>
           )}
         </div>

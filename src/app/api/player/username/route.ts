@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { resolvePlayer } from "@/lib/auth";
+import { resolvePlayer, invalidatePlayerCache } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import type { ApiResponse, SetUsernameResponse } from "@/types";
 
@@ -62,6 +62,11 @@ export async function POST(
           displayName,
         },
       });
+
+      // Invalidate player cache so the next /api/player call sees the new username
+      if (player.firebaseUid) {
+        invalidatePlayerCache(player.firebaseUid);
+      }
 
       return NextResponse.json({
         success: true,

@@ -13,6 +13,7 @@ import type { User } from "firebase/auth";
 interface FirebaseAuthContextType {
   user: User | null;
   loading: boolean;
+  signInError: string | null;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   getIdToken: () => Promise<string | null>;
@@ -21,6 +22,7 @@ interface FirebaseAuthContextType {
 const FirebaseAuthContext = createContext<FirebaseAuthContextType>({
   user: null,
   loading: true,
+  signInError: null,
   signInWithGoogle: async () => {},
   signOut: async () => {},
   getIdToken: async () => null,
@@ -29,6 +31,7 @@ const FirebaseAuthContext = createContext<FirebaseAuthContextType>({
 export function FirebaseAuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [signInError, setSignInError] = useState<string | null>(null);
 
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
@@ -48,12 +51,34 @@ export function FirebaseAuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signInWithGoogle = useCallback(async () => {
-    const { getFirebaseAuth } = await import("@/lib/firebase");
-    const { signInWithPopup, GoogleAuthProvider } = await import(
-      "firebase/auth"
-    );
-    const provider = new GoogleAuthProvider();
-    await signInWithPopup(getFirebaseAuth(), provider);
+    setSignInError(null);
+    try {
+      const { getFirebaseAuth } = await import("@/lib/firebase");
+      const { signInWithPopup, signInWithRedirect, GoogleAuthProvider } =
+        await import("firebase/auth");
+      const auth = getFirebaseAuth();
+      const provider = new GoogleAuthProvider();
+      try {
+        await signInWithPopup(auth, provider);
+      } catch (popupErr: unknown) {
+        // Popup blocked or failed — fall back to redirect
+        const code = (popupErr as { code?: string })?.code;
+        if (
+          code === "auth/popup-blocked" ||
+          code === "auth/popup-closed-by-user" ||
+          code === "auth/cancelled-popup-request"
+        ) {
+          await signInWithRedirect(auth, provider);
+        } else {
+          throw popupErr;
+        }
+      }
+    } catch (err: unknown) {
+      console.error("Google sign-in failed:", err);
+      const code = (err as { code?: string })?.code;
+      const msg = (err as { message?: string })?.message;
+      setSignInError(code || msg || "Sign-in failed. Please try again.");
+    }
   }, []);
 
   const signOut = useCallback(async () => {
@@ -69,7 +94,7 @@ export function FirebaseAuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <FirebaseAuthContext.Provider
-      value={{ user, loading, signInWithGoogle, signOut, getIdToken }}
+      value={{ user, loading, signInError, signInWithGoogle, signOut, getIdToken }}
     >
       {children}
     </FirebaseAuthContext.Provider>

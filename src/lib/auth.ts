@@ -11,20 +11,9 @@ interface AuthResult {
 
 const ACTIVE_THROTTLE_MS = 5 * 60 * 1000; // 5 minutes
 
-// --- Token verification cache (avoids repeated Firebase network calls) ---
-const TOKEN_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-const tokenCache = new Map<string, { uid: string; expiresAt: number }>();
-
-/** Verify Firebase ID token with in-memory cache. */
-async function verifyIdTokenCached(idToken: string): Promise<string> {
-  // Use first 32 chars as cache key (enough to be unique, avoids storing full token)
-  const cacheKey = idToken.slice(0, 32);
-  const cached = tokenCache.get(cacheKey);
-  if (cached && cached.expiresAt > Date.now()) {
-    return cached.uid;
-  }
+/** Verify Firebase ID token. Firebase Admin SDK caches signing keys internally. */
+async function verifyIdToken(idToken: string): Promise<string> {
   const decoded = await getAdminAuth().verifyIdToken(idToken);
-  tokenCache.set(cacheKey, { uid: decoded.uid, expiresAt: Date.now() + TOKEN_CACHE_TTL });
   return decoded.uid;
 }
 
@@ -77,7 +66,7 @@ export async function resolvePlayer(
   if (authHeader?.startsWith("Bearer ")) {
     const idToken = authHeader.slice(7);
     try {
-      const firebaseUid = await verifyIdTokenCached(idToken);
+      const firebaseUid = await verifyIdToken(idToken);
 
       let player = await findPlayerCached(firebaseUid);
 
