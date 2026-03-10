@@ -15,6 +15,9 @@ dist/
 .env.local
 .env.*.local
 
+# Claude Code (may contain allowed-command rules with secrets)
+.claude/
+
 # Debug
 npm-debug.log*
 yarn-debug.log*
