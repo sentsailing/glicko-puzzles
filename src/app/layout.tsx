@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { FirebaseAuthProvider } from "@/contexts/FirebaseAuthContext";
@@ -7,7 +7,14 @@ import { SessionProvider } from "@/contexts/SessionContext";
 import { UsernameGate } from "@/components/UsernameGate";
 import "./globals.css";
 
+export const viewport: Viewport = {
+  themeColor: "#2563eb",
+  width: "device-width",
+  initialScale: 1,
+};
+
 export const metadata: Metadata = {
+  metadataBase: new URL("https://glickglick.com"),
   title: {
     default: "GLICKGLICK — Rating-Based Math Practice for Students",
     template: "%s | GLICKGLICK",
@@ -31,15 +38,19 @@ export const metadata: Metadata = {
     "math puzzles",
   ],
   category: "education",
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
     title: "GLICKGLICK — Educational Math Practice for Students",
     description:
       "Free adaptive math practice platform for students. Competition-level problems with skill-based rating. Ideal for classroom use and math competition prep.",
     type: "website",
     siteName: "GLICKGLICK",
+    url: "https://glickglick.com",
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "GLICKGLICK — Educational Math Practice for Students",
     description:
       "Free adaptive math practice platform for students. Competition-level problems with skill-based rating.",

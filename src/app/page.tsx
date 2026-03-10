@@ -4,7 +4,10 @@ import { HeroCTA } from "@/components/HeroCTA";
 import { TierShowcase } from "@/components/TierShowcase";
 
 export const metadata: Metadata = {
-  title: "GLICKGLICK — Rating-Based Math Practice",
+  title: "GLICKGLICK — Free Adaptive Math Practice for Students",
+  alternates: {
+    canonical: "/",
+  },
 };
 
 export default function HomePage() {

@@ -3,6 +3,11 @@ import { Header } from "@/components/Header";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
+  description:
+    "GLICKGLICK privacy policy. Learn how we handle your data, authentication, and analytics.",
+  alternates: {
+    canonical: "/privacy",
+  },
 };
 
 export default function PrivacyPage() {
