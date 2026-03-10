@@ -5,10 +5,11 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
-import type { User } from "firebase/auth";
+import type { Auth, User } from "firebase/auth";
 
 interface FirebaseAuthContextType {
   user: User | null;
@@ -28,40 +29,52 @@ const FirebaseAuthContext = createContext<FirebaseAuthContextType>({
   getIdToken: async () => null,
 });
 
+// Cached module references — resolved once, reused on every call
+let _authInstance: Auth | null = null;
+let _authModule: typeof import("firebase/auth") | null = null;
+const _authReady: Promise<void> = (typeof window !== "undefined")
+  ? import("@/lib/firebase").then(async ({ getFirebaseAuth }) => {
+      const mod = await import("firebase/auth");
+      _authInstance = getFirebaseAuth();
+      _authModule = mod;
+    })
+  : Promise.resolve();
+
 export function FirebaseAuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [signInError, setSignInError] = useState<string | null>(null);
+  const userRef = useRef<User | null>(null);
+
+  // Keep ref in sync so getIdToken always sees latest user without re-creating
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
 
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
 
-    async function init() {
-      const { getFirebaseAuth } = await import("@/lib/firebase");
-      const { onAuthStateChanged } = await import("firebase/auth");
-      const firebaseAuth = getFirebaseAuth();
-      unsubscribe = onAuthStateChanged(firebaseAuth, (firebaseUser) => {
+    _authReady.then(() => {
+      if (!_authInstance || !_authModule) return;
+      unsubscribe = _authModule.onAuthStateChanged(_authInstance, (firebaseUser) => {
         setUser(firebaseUser);
         setLoading(false);
       });
-    }
+    });
 
-    init();
     return () => unsubscribe?.();
   }, []);
 
   const signInWithGoogle = useCallback(async () => {
     setSignInError(null);
     try {
-      const { getFirebaseAuth } = await import("@/lib/firebase");
-      const { signInWithPopup, signInWithRedirect, GoogleAuthProvider } =
-        await import("firebase/auth");
-      const auth = getFirebaseAuth();
+      await _authReady;
+      const auth = _authInstance!;
+      const { signInWithPopup, signInWithRedirect, GoogleAuthProvider } = _authModule!;
       const provider = new GoogleAuthProvider();
       try {
         await signInWithPopup(auth, provider);
       } catch (popupErr: unknown) {
-        // Popup blocked or failed — fall back to redirect
         const code = (popupErr as { code?: string })?.code;
         if (
           code === "auth/popup-blocked" ||
@@ -82,15 +95,15 @@ export function FirebaseAuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
-    const { getFirebaseAuth } = await import("@/lib/firebase");
-    const { signOut: firebaseSignOut } = await import("firebase/auth");
-    await firebaseSignOut(getFirebaseAuth());
+    await _authReady;
+    await _authModule!.signOut(_authInstance!);
   }, []);
 
   const getIdToken = useCallback(async (): Promise<string | null> => {
-    if (!user) return null;
-    return user.getIdToken();
-  }, [user]);
+    const u = userRef.current;
+    if (!u) return null;
+    return u.getIdToken();
+  }, []);
 
   return (
     <FirebaseAuthContext.Provider

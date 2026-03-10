@@ -26,17 +26,22 @@ export function useSession() {
   const initialized = useRef(false);
   // Track the current Firebase user identity to detect auth changes
   const lastFirebaseUid = useRef<string | null | undefined>(undefined);
+  // Refs for stable callbacks (avoids re-creating buildAuthHeaders/fetchWithSession)
+  const firebaseUserRef = useRef(firebaseUser);
+  const tokenRef = useRef(state.token);
 
-  // Build auth headers for the current auth mode
+  useEffect(() => { firebaseUserRef.current = firebaseUser; }, [firebaseUser]);
+  useEffect(() => { tokenRef.current = state.token; }, [state.token]);
+
+  // Build auth headers — stable callback, reads refs
   const buildAuthHeaders = useCallback(async (): Promise<Record<string, string>> => {
-    if (firebaseUser) {
+    if (firebaseUserRef.current) {
       const idToken = await getIdToken();
       if (idToken) {
         return { Authorization: `Bearer ${idToken}` };
       }
     }
 
-    // Fall back to anonymous session token
     const storedToken =
       typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null;
     if (storedToken) {
@@ -44,21 +49,24 @@ export function useSession() {
     }
 
     return {};
-  }, [firebaseUser, getIdToken]);
+  }, [getIdToken]);
 
   // Initialize session from Firebase or localStorage
   const initSession = useCallback(async () => {
-    // Detect whether the Firebase user changed (sign-in / sign-out)
     const currentUid = firebaseUser?.uid ?? null;
     const authChanged = lastFirebaseUid.current !== undefined && lastFirebaseUid.current !== currentUid;
     lastFirebaseUid.current = currentUid;
 
-    // Skip re-initialization if session is already loaded and auth didn't change
     if (initialized.current && !authChanged) {
       return;
     }
 
-    setState((prev) => ({ ...prev, loading: true, error: null }));
+    // On auth change, keep existing player data visible while re-fetching
+    setState((prev) => ({
+      ...prev,
+      loading: !initialized.current,
+      error: null,
+    }));
 
     try {
       const headers = await buildAuthHeaders();
@@ -77,7 +85,6 @@ export function useSession() {
 
       if (result.success && result.data) {
         if (firebaseUser && typeof window !== "undefined") {
-          // Clear anonymous token after successful auth (merged or fresh)
           localStorage.removeItem(STORAGE_KEY);
         } else if (!firebaseUser && typeof window !== "undefined") {
           localStorage.setItem(STORAGE_KEY, result.data.sessionToken);
@@ -112,14 +119,13 @@ export function useSession() {
   const refreshPlayer = useCallback(async () => {
     try {
       const headers = await buildAuthHeaders();
-      if (Object.keys(headers).length === 0 && !state.token) return;
+      if (Object.keys(headers).length === 0 && !tokenRef.current) return;
 
-      // Use current token as fallback if buildAuthHeaders returned empty
       const finalHeaders =
         Object.keys(headers).length > 0
           ? headers
-          : state.token
-            ? { [SESSION_TOKEN_HEADER]: state.token }
+          : tokenRef.current
+            ? { [SESSION_TOKEN_HEADER]: tokenRef.current }
             : {};
 
       const response = await fetch("/api/player", { headers: finalHeaders });
@@ -131,19 +137,18 @@ export function useSession() {
     } catch {
       // Silently fail refresh
     }
-  }, [buildAuthHeaders, state.token]);
+  }, [buildAuthHeaders]);
 
   // Helper to make authenticated API calls
   const fetchWithSession = useCallback(
     async (url: string, options: RequestInit = {}) => {
       const authHeaders = await buildAuthHeaders();
 
-      // Fall back to current token if buildAuthHeaders returned empty
       const finalHeaders =
         Object.keys(authHeaders).length > 0
           ? authHeaders
-          : state.token
-            ? { [SESSION_TOKEN_HEADER]: state.token }
+          : tokenRef.current
+            ? { [SESSION_TOKEN_HEADER]: tokenRef.current }
             : {};
 
       return fetch(url, {
@@ -154,7 +159,7 @@ export function useSession() {
         },
       });
     },
-    [buildAuthHeaders, state.token]
+    [buildAuthHeaders]
   );
 
   // Eager init for returning anonymous users — don't wait for Firebase SDK
@@ -187,7 +192,6 @@ export function useSession() {
   // Wait for Firebase auth to settle, then initialize session
   useEffect(() => {
     if (!firebaseLoading) {
-      // Already initialized eagerly and no Firebase user — skip
       if (initialized.current && !firebaseUser) return;
       initSession();
     }
