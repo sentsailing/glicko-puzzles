@@ -2,6 +2,7 @@
 
 import { useSessionContext } from "@/contexts/SessionContext";
 import { UsernameModal } from "./UsernameModal";
+import { AuthTransition } from "./AuthTransition";
 
 export function UsernameGate({ children }: { children: React.ReactNode }) {
   const { player, loading, refreshPlayer, fetchWithSession } = useSessionContext();
@@ -11,6 +12,7 @@ export function UsernameGate({ children }: { children: React.ReactNode }) {
   return (
     <>
       {children}
+      <AuthTransition />
       {showModal && (
         <UsernameModal
           fetchWithSession={fetchWithSession}
