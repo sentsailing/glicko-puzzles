@@ -79,7 +79,10 @@ function LeaderboardRow({
       <div className="flex-1 min-w-0">
         <span
           className={`text-sm font-semibold truncate ${isMedal ? "" : tier.color}`}
-          style={isMedal ? MEDAL_USERNAME_STYLES[entry.rank - 1] : undefined}
+          style={isMedal
+            ? MEDAL_USERNAME_STYLES[entry.rank - 1]
+            : { filter: `drop-shadow(0 0 4px ${tier.hex}80)` }
+          }
         >
           @{entry.username}
         </span>
@@ -88,14 +91,20 @@ function LeaderboardRow({
       {/* Rating + Tier icon (grouped together) */}
       <div className="flex items-center gap-1.5 flex-shrink-0">
         <div
-          className={`${isMedal ? "" : tier.color} ${isMedal ? "tier-icon-glow" : ""}`}
-          style={isMedal ? { color: MEDAL_FILL[entry.rank - 1].inner, "--tier-glow": MEDAL_FILL[entry.rank - 1].inner } as React.CSSProperties : undefined}
+          className={`${isMedal ? "" : tier.color} tier-icon-glow`}
+          style={isMedal
+            ? { color: MEDAL_FILL[entry.rank - 1].inner, "--tier-glow": MEDAL_FILL[entry.rank - 1].inner } as React.CSSProperties
+            : { "--tier-glow": tier.hex } as React.CSSProperties
+          }
         >
           <TierIcon tier={tier.name} size={isMedal ? 22 : 18} animate={isMedal} />
         </div>
         <span
           className={`text-sm font-bold tabular-nums ${isMedal ? "" : tier.color}`}
-          style={isMedal ? MEDAL_USERNAME_STYLES[entry.rank - 1] : undefined}
+          style={isMedal
+            ? MEDAL_USERNAME_STYLES[entry.rank - 1]
+            : { filter: `drop-shadow(0 0 4px ${tier.hex}80)` }
+          }
         >
           {Math.round(entry.rating)}
         </span>
@@ -153,32 +162,6 @@ export default function LeaderboardPage() {
         <div className="w-full mb-6 animate-fade-in-up">
           <h1 className="text-3xl font-bold tracking-tight">Leaderboard (Top 25)</h1>
         </div>
-
-        {/* Player rank card */}
-        {data?.playerRank != null && player?.username && (
-          <div
-            className="w-full rounded-xl border border-[var(--accent)]/30 bg-[var(--accent)]/5 p-4 mb-6 animate-fade-in-up stagger-1"
-            style={{ boxShadow: "var(--card-shadow)" }}
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="text-2xl font-bold tabular-nums text-[var(--accent)]">
-                  #{data.playerRank}
-                </div>
-                <div>
-                  <div className="text-sm font-semibold">@{player.username}</div>
-                  <div className="text-xs text-[var(--muted)]">
-                    Top {Math.max(1, Math.round(((data.playerRank) / data.totalRanked) * 100))}%
-                  </div>
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-lg font-bold tabular-nums">{Math.round(player.rating)}</div>
-                <div className="text-xs text-[var(--muted)]">{player.gamesPlayed} games</div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Sign-in nudge */}
         {!user && (
@@ -292,6 +275,32 @@ export default function LeaderboardPage() {
                 </div>
               </>
             )}
+          </div>
+        )}
+
+        {/* Player rank card */}
+        {data?.playerRank != null && player?.username && (
+          <div
+            className="w-full rounded-xl border border-[var(--accent)]/30 bg-[var(--accent)]/5 p-4 mt-6 animate-fade-in-up stagger-3"
+            style={{ boxShadow: "var(--card-shadow)" }}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="text-2xl font-bold tabular-nums text-[var(--accent)]">
+                  #{data.playerRank}
+                </div>
+                <div>
+                  <div className="text-sm font-semibold">@{player.username}</div>
+                  <div className="text-xs text-[var(--muted)]">
+                    Top {Math.max(1, Math.round(((data.playerRank) / data.totalRanked) * 100))}%
+                  </div>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-lg font-bold tabular-nums">{Math.round(player.rating)}</div>
+                <div className="text-xs text-[var(--muted)]">{player.gamesPlayed} games</div>
+              </div>
+            </div>
           </div>
         )}
 
