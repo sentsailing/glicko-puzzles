@@ -113,7 +113,7 @@ function LeaderboardRow({
       </div>
 
       {/* Daily rating change */}
-      <div className="w-16 flex-shrink-0 ml-2">
+      <div className="w-16 flex-shrink-0 hidden sm:block">
         {rc != null && rc !== 0 ? (
           <span className={`text-xs font-bold tabular-nums flex items-center gap-1 ${rc > 0 ? "text-[var(--success)]" : "text-[var(--error)]"}`}>
             <svg className="w-2.5 h-2.5 flex-shrink-0" viewBox="0 0 10 10" fill="currentColor">
@@ -248,7 +248,7 @@ export default function LeaderboardPage() {
               <div className="flex-shrink-0">
                 <span className="text-[10px] font-medium text-[var(--muted)] uppercase tracking-wider">Rating</span>
               </div>
-              <div className="w-16 flex-shrink-0 ml-2">
+              <div className="w-16 flex-shrink-0 hidden sm:block">
                 <span className="text-[10px] font-medium text-[var(--muted)] uppercase tracking-wider">24h</span>
               </div>
               <div className="w-16 text-right flex-shrink-0 hidden sm:block">
