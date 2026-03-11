@@ -13,6 +13,7 @@ import type { Auth, User } from "firebase/auth";
 interface FirebaseAuthContextType {
   user: User | null;
   loading: boolean;
+  signingIn: boolean;
   signInError: string | null;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -22,6 +23,7 @@ interface FirebaseAuthContextType {
 const FirebaseAuthContext = createContext<FirebaseAuthContextType>({
   user: null,
   loading: true,
+  signingIn: false,
   signInError: null,
   signInWithGoogle: async () => {},
   signOut: async () => {},
@@ -42,6 +44,7 @@ const _authReady: Promise<void> = (typeof window !== "undefined")
 export function FirebaseAuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [signingIn, setSigningIn] = useState(false);
   const [signInError, setSignInError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -60,6 +63,7 @@ export function FirebaseAuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithGoogle = useCallback(async () => {
     setSignInError(null);
+    setSigningIn(true);
     try {
       await _authReady;
       const auth = _authInstance!;
@@ -84,6 +88,8 @@ export function FirebaseAuthProvider({ children }: { children: ReactNode }) {
       const code = (err as { code?: string })?.code;
       const msg = (err as { message?: string })?.message;
       setSignInError(code || msg || "Sign-in failed. Please try again.");
+    } finally {
+      setSigningIn(false);
     }
   }, []);
 
@@ -99,7 +105,7 @@ export function FirebaseAuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <FirebaseAuthContext.Provider
-      value={{ user, loading, signInError, signInWithGoogle, signOut, getIdToken }}
+      value={{ user, loading, signingIn, signInError, signInWithGoogle, signOut, getIdToken }}
     >
       {children}
     </FirebaseAuthContext.Provider>

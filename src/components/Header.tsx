@@ -10,7 +10,7 @@ import { GoogleIcon } from "./GoogleIcon";
 import { TierIcon } from "./TierIcon";
 
 export function Header() {
-  const { user, loading, signInError, signInWithGoogle, signOut } = useFirebaseAuth();
+  const { user, loading, signingIn, signInError, signInWithGoogle, signOut } = useFirebaseAuth();
   const { player } = useSessionContext();
   const { theme, toggleTheme } = useTheme();
   const pathname = usePathname();
@@ -149,10 +149,22 @@ export function Header() {
             <div className="relative">
               <button
                 onClick={signInWithGoogle}
-                className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-[var(--accent)] text-white text-sm font-medium hover:bg-[var(--accent-hover)] transition-colors shadow-sm"
+                disabled={signingIn}
+                className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-white text-sm font-medium transition-colors shadow-sm ${
+                  signingIn
+                    ? "bg-[var(--accent)]/70 cursor-wait"
+                    : "bg-[var(--accent)] hover:bg-[var(--accent-hover)]"
+                }`}
               >
-                <GoogleIcon size={16} />
-                Sign in
+                {signingIn ? (
+                  <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" className="opacity-25" />
+                    <path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                  </svg>
+                ) : (
+                  <GoogleIcon size={16} />
+                )}
+                {signingIn ? "Signing in\u2026" : "Sign in"}
               </button>
               {signInError && (
                 <div className="absolute right-0 top-full mt-2 w-64 p-3 rounded-lg border border-red-500/50 bg-[var(--background)] text-xs text-red-400 shadow-lg z-50">

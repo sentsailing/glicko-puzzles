@@ -166,7 +166,7 @@ export function RatingSidebar({
   combo,
   maxCombo,
 }: RatingSidebarProps) {
-  const { user, signInWithGoogle } = useFirebaseAuth();
+  const { user, signingIn, signInWithGoogle } = useFirebaseAuth();
   const { player } = useSessionContext();
   const isAnonymous = !user && !player?.isAuthenticated;
   const currentRating = rating ?? 1500;
@@ -343,10 +343,20 @@ export function RatingSidebar({
           </p>
           <button
             onClick={signInWithGoogle}
-            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg border border-[var(--border)] text-sm font-medium hover:bg-[var(--border)]/30 transition-colors"
+            disabled={signingIn}
+            className={`w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg border border-[var(--border)] text-sm font-medium transition-colors ${
+              signingIn ? "opacity-70 cursor-wait" : "hover:bg-[var(--border)]/30"
+            }`}
           >
-            <GoogleIcon size={16} />
-            Sign in with Google
+            {signingIn ? (
+              <svg className="w-4 h-4 animate-spin text-[var(--accent)]" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" className="opacity-25" />
+                <path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+              </svg>
+            ) : (
+              <GoogleIcon size={16} />
+            )}
+            {signingIn ? "Signing in\u2026" : "Sign in with Google"}
           </button>
         </div>
       )}

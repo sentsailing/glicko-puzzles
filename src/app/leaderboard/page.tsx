@@ -13,11 +13,37 @@ function getTierByName(name: string) {
   return TIERS.find((t) => t.name === name) ?? TIERS[0];
 }
 
-/** Medal colors for top 3. */
-const MEDAL_COLORS = [
-  "text-amber-400",   // gold
-  "text-gray-400",    // silver
-  "text-orange-600",  // bronze
+/** Medal SVG colors for top 3. */
+const MEDAL_FILL = [
+  { outer: "#f59e0b", inner: "#fbbf24", text: "#78350f" }, // gold
+  { outer: "#9ca3af", inner: "#d1d5db", text: "#374151" }, // silver
+  { outer: "#c2410c", inner: "#ea580c", text: "#431407" }, // bronze
+];
+
+function MedalIcon({ rank, size = 28 }: { rank: 1 | 2 | 3; size?: number }) {
+  const m = MEDAL_FILL[rank - 1];
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
+      {/* Ribbon tails */}
+      <path d="M11 4L8 0H12L14 4Z" fill={m.outer} opacity={0.5} />
+      <path d="M21 4L24 0H20L18 4Z" fill={m.outer} opacity={0.5} />
+      {/* Medal body */}
+      <circle cx="16" cy="18" r="13" fill={m.outer} />
+      <circle cx="16" cy="18" r="10.5" fill={m.inner} />
+      <circle cx="16" cy="18" r="9" fill={m.outer} opacity={0.15} />
+      {/* Rank number */}
+      <text x="16" y="23" textAnchor="middle" fontSize="13" fontWeight="800" fill={m.text} fontFamily="system-ui">
+        {rank}
+      </text>
+    </svg>
+  );
+}
+
+/** Shiny gradient styles + glow for top 3 usernames. */
+const MEDAL_USERNAME_STYLES: React.CSSProperties[] = [
+  { background: "linear-gradient(135deg, #fbbf24, #f59e0b, #fcd34d)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", filter: "drop-shadow(0 0 6px rgba(251, 191, 36, 0.6))" }, // gold
+  { background: "linear-gradient(135deg, #d1d5db, #9ca3af, #e5e7eb)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", filter: "drop-shadow(0 0 6px rgba(156, 163, 175, 0.5))" }, // silver
+  { background: "linear-gradient(135deg, #ea580c, #c2410c, #fb923c)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", filter: "drop-shadow(0 0 6px rgba(234, 88, 12, 0.5))" }, // bronze
 ];
 
 function LeaderboardRow({
@@ -39,11 +65,9 @@ function LeaderboardRow({
       }`}
     >
       {/* Rank */}
-      <div className="w-8 text-center flex-shrink-0">
+      <div className="w-8 flex items-center justify-center flex-shrink-0">
         {isMedal ? (
-          <span className={`text-lg font-bold ${MEDAL_COLORS[entry.rank - 1]}`}>
-            {entry.rank}
-          </span>
+          <MedalIcon rank={entry.rank as 1 | 2 | 3} />
         ) : (
           <span className="text-sm font-medium text-[var(--muted)] tabular-nums">
             {entry.rank}
@@ -53,7 +77,10 @@ function LeaderboardRow({
 
       {/* Player info */}
       <div className="flex-1 min-w-0">
-        <span className="text-sm font-semibold truncate">
+        <span
+          className={`text-sm font-semibold truncate ${isMedal ? "" : tier.color}`}
+          style={isMedal ? MEDAL_USERNAME_STYLES[entry.rank - 1] : undefined}
+        >
           @{entry.username}
         </span>
       </div>
@@ -66,13 +93,16 @@ function LeaderboardRow({
         >
           <TierIcon tier={tier.name} size={isMedal ? 22 : 18} animate={isMedal} />
         </div>
-        <span className={`text-sm font-bold tabular-nums ${tier.color}`}>
+        <span
+          className={`text-sm font-bold tabular-nums ${isMedal ? "" : tier.color}`}
+          style={isMedal ? MEDAL_USERNAME_STYLES[entry.rank - 1] : undefined}
+        >
           {Math.round(entry.rating)}
         </span>
       </div>
 
       {/* Games */}
-      <div className="w-16 text-right flex-shrink-0 hidden sm:block">
+      <div className="w-20 text-right flex-shrink-0 hidden sm:block">
         <span className="text-xs text-[var(--muted)] tabular-nums">
           {entry.gamesPlayed} games
         </span>
@@ -90,7 +120,7 @@ function LeaderboardRow({
 
 export default function LeaderboardPage() {
   const { player, fetchWithSession } = useSessionContext();
-  const { user, signInWithGoogle } = useFirebaseAuth();
+  const { user, signingIn, signInWithGoogle } = useFirebaseAuth();
   const [data, setData] = useState<LeaderboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -121,12 +151,7 @@ export default function LeaderboardPage() {
       <div className="flex-1 flex flex-col items-center px-4 py-8 max-w-2xl mx-auto w-full">
         {/* Title */}
         <div className="w-full mb-6 animate-fade-in-up">
-          <div className="flex items-center gap-3">
-            <svg className="w-7 h-7 text-amber-400" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-            </svg>
-            <h1 className="text-3xl font-bold tracking-tight">Leaderboard</h1>
-          </div>
+          <h1 className="text-3xl font-bold tracking-tight">Leaderboard (Top 25)</h1>
         </div>
 
         {/* Player rank card */}
@@ -143,7 +168,7 @@ export default function LeaderboardPage() {
                 <div>
                   <div className="text-sm font-semibold">@{player.username}</div>
                   <div className="text-xs text-[var(--muted)]">
-                    of {data.totalRanked} ranked players
+                    Top {Math.max(1, Math.round(((data.playerRank) / data.totalRanked) * 100))}%
                   </div>
                 </div>
               </div>
@@ -171,10 +196,20 @@ export default function LeaderboardPage() {
               </div>
               <button
                 onClick={signInWithGoogle}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg border border-[var(--border)] text-sm font-medium hover:bg-[var(--border)]/30 transition-colors flex-shrink-0"
+                disabled={signingIn}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg border border-[var(--border)] text-sm font-medium transition-colors flex-shrink-0 ${
+                  signingIn ? "opacity-70 cursor-wait" : "hover:bg-[var(--border)]/30"
+                }`}
               >
-                <GoogleIcon size={16} />
-                Sign in
+                {signingIn ? (
+                  <svg className="w-4 h-4 animate-spin text-[var(--accent)]" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" className="opacity-25" />
+                    <path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                  </svg>
+                ) : (
+                  <GoogleIcon size={16} />
+                )}
+                {signingIn ? "Signing in\u2026" : "Sign in"}
               </button>
             </div>
           </div>
@@ -211,7 +246,7 @@ export default function LeaderboardPage() {
               <div className="flex-shrink-0">
                 <span className="text-[10px] font-medium text-[var(--muted)] uppercase tracking-wider">Rating</span>
               </div>
-              <div className="w-16 text-right flex-shrink-0 hidden sm:block">
+              <div className="w-20 text-right flex-shrink-0 hidden sm:block">
                 <span className="text-[10px] font-medium text-[var(--muted)] uppercase tracking-wider">Games</span>
               </div>
             </div>
@@ -222,15 +257,40 @@ export default function LeaderboardPage() {
                 No ranked players yet. Be the first!
               </div>
             ) : (
-              <div className="divide-y divide-[var(--border)]/50">
-                {data.leaderboard.map((entry) => (
-                  <LeaderboardRow
-                    key={entry.username}
-                    entry={entry}
-                    isCurrentPlayer={player?.username === entry.username}
-                  />
-                ))}
-              </div>
+              <>
+                {/* Podium — top 3 */}
+                {data.leaderboard.filter((e) => e.rank <= 3).length > 0 && (
+                  <div className="bg-gradient-to-b from-amber-500/[0.04] to-transparent py-1">
+                    {data.leaderboard
+                      .filter((e) => e.rank <= 3)
+                      .map((entry) => (
+                        <LeaderboardRow
+                          key={entry.username}
+                          entry={entry}
+                          isCurrentPlayer={player?.username === entry.username}
+                        />
+                      ))}
+                  </div>
+                )}
+                {/* Separator */}
+                {data.leaderboard.some((e) => e.rank > 3) && (
+                  <div className="flex items-center gap-3 px-6 py-0.5">
+                    <div className="flex-1 h-px bg-gradient-to-r from-amber-500/20 via-[var(--border)] to-amber-500/20" />
+                  </div>
+                )}
+                {/* Rest */}
+                <div className="divide-y divide-[var(--border)]/50">
+                  {data.leaderboard
+                    .filter((e) => e.rank > 3)
+                    .map((entry) => (
+                      <LeaderboardRow
+                        key={entry.username}
+                        entry={entry}
+                        isCurrentPlayer={player?.username === entry.username}
+                      />
+                    ))}
+                </div>
+              </>
             )}
           </div>
         )}

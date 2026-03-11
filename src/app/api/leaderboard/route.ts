@@ -5,7 +5,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import type { ApiResponse, LeaderboardResponse } from "@/types";
 
 const MIN_GAMES = 1;
-const LEADERBOARD_LIMIT = 50;
+const LEADERBOARD_LIMIT = 25;
 
 /**
  * GET /api/leaderboard
