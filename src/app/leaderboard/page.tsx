@@ -88,8 +88,8 @@ function LeaderboardRow({
       {/* Rating + Tier icon (grouped together) */}
       <div className="flex items-center gap-1.5 flex-shrink-0">
         <div
-          className={`${tier.color} ${isMedal ? "tier-icon-glow" : ""}`}
-          style={isMedal ? { "--tier-glow": tier.hex } as React.CSSProperties : undefined}
+          className={`${isMedal ? "" : tier.color} ${isMedal ? "tier-icon-glow" : ""}`}
+          style={isMedal ? { color: MEDAL_FILL[entry.rank - 1].inner, "--tier-glow": MEDAL_FILL[entry.rank - 1].inner } as React.CSSProperties : undefined}
         >
           <TierIcon tier={tier.name} size={isMedal ? 22 : 18} animate={isMedal} />
         </div>
