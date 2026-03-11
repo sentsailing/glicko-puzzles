@@ -122,7 +122,7 @@ function LeaderboardRow({
                 : <path d="M5 9L1 4H9Z" />
               }
             </svg>
-            {rc > 0 ? "+" : ""}{rc}
+{Math.abs(rc)}
           </span>
         ) : (
           <span className="text-xs text-[var(--muted)]/40 tabular-nums">&mdash;</span>
