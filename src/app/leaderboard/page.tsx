@@ -78,7 +78,7 @@ function LeaderboardRow({
       </div>
 
       {/* Player info */}
-      <div className="flex-1 min-w-0 max-w-[45%]">
+      <div className="flex-1 min-w-0">
         <span
           className={`text-sm font-semibold truncate ${isMedal ? "" : tier.color}`}
           style={isMedal
