@@ -164,12 +164,20 @@ export interface LeaderboardEntry {
   rating: number;
   confirmedTier: string;
   gamesPlayed: number;
+  rankChange: number | null; // positive = climbed, negative = dropped, null = new
+}
+
+export interface ClosestRival {
+  username: string;
+  rating: number;
+  pointsAhead: number;
 }
 
 export interface LeaderboardResponse {
   leaderboard: LeaderboardEntry[];
   playerRank: number | null;
   totalRanked: number;
+  closestRival: ClosestRival | null;
 }
 
 // Session token header name

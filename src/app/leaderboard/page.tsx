@@ -46,6 +46,25 @@ const MEDAL_USERNAME_STYLES: React.CSSProperties[] = [
   { background: "linear-gradient(135deg, #ea580c, #c2410c, #fb923c)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", filter: "drop-shadow(0 0 6px rgba(234, 88, 12, 0.5))" }, // bronze
 ];
 
+function RankChangeIndicator({ change }: { change: number | null }) {
+  if (change === null) {
+    return <span className="text-[10px] font-medium text-[var(--accent)] tabular-nums">NEW</span>;
+  }
+  if (change === 0) return null;
+  const up = change > 0;
+  return (
+    <span className={`text-[10px] font-bold tabular-nums flex items-center gap-0.5 ${up ? "text-[var(--success)]" : "text-[var(--error)]"}`}>
+      <svg className="w-2.5 h-2.5" viewBox="0 0 10 10" fill="currentColor">
+        {up
+          ? <path d="M5 1L9 6H1Z" />
+          : <path d="M5 9L1 4H9Z" />
+        }
+      </svg>
+      {Math.abs(change)}
+    </span>
+  );
+}
+
 function LeaderboardRow({
   entry,
   isCurrentPlayer,
@@ -58,14 +77,15 @@ function LeaderboardRow({
 
   return (
     <div
-      className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
+      className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors relative ${
         isCurrentPlayer
           ? `${tier.bg} ${tier.border} border`
           : "hover:bg-[var(--border)]/20"
       }`}
+      style={{ borderLeft: `3px solid ${isMedal ? MEDAL_FILL[entry.rank - 1].inner : tier.hex}` }}
     >
-      {/* Rank */}
-      <div className="w-8 flex items-center justify-center flex-shrink-0">
+      {/* Rank + change */}
+      <div className="w-10 flex flex-col items-center flex-shrink-0">
         {isMedal ? (
           <MedalIcon rank={entry.rank as 1 | 2 | 3} />
         ) : (
@@ -73,6 +93,7 @@ function LeaderboardRow({
             {entry.rank}
           </span>
         )}
+        <RankChangeIndicator change={entry.rankChange} />
       </div>
 
       {/* Player info */}
@@ -220,7 +241,7 @@ export default function LeaderboardPage() {
           >
             {/* Header row */}
             <div className="flex items-center gap-3 px-4 py-2.5 border-b border-[var(--border)] bg-[var(--border)]/20">
-              <div className="w-8 text-center flex-shrink-0">
+              <div className="w-10 text-center flex-shrink-0">
                 <span className="text-[10px] font-medium text-[var(--muted)] uppercase tracking-wider">#</span>
               </div>
               <div className="flex-1">
@@ -301,6 +322,16 @@ export default function LeaderboardPage() {
                 <div className="text-xs text-[var(--muted)]">{player.gamesPlayed} games</div>
               </div>
             </div>
+            {data.closestRival && (
+              <div className="mt-3 pt-3 border-t border-[var(--accent)]/20 flex items-center gap-2 text-xs">
+                <svg className="w-3.5 h-3.5 text-[var(--accent)] flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                </svg>
+                <span className="text-[var(--muted)]">
+                  <span className="font-semibold text-[var(--foreground)]">{data.closestRival.pointsAhead} pts</span> behind <span className="font-semibold text-[var(--foreground)]">@{data.closestRival.username}</span>
+                </span>
+              </div>
+            )}
           </div>
         )}
 
