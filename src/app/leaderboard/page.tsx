@@ -249,7 +249,7 @@ export default function LeaderboardPage() {
                 <span className="text-[10px] font-medium text-[var(--muted)] uppercase tracking-wider">Rating</span>
               </div>
               <div className="w-14 text-right flex-shrink-0">
-                <span className="text-[10px] font-medium text-[var(--muted)] uppercase tracking-wider">1h</span>
+                <span className="text-[10px] font-medium text-[var(--muted)] uppercase tracking-wider">24h</span>
               </div>
               <div className="w-16 text-right flex-shrink-0 hidden sm:block">
                 <span className="text-[10px] font-medium text-[var(--muted)] uppercase tracking-wider">Games</span>

@@ -45,7 +45,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
 
     // --- Hourly rating changes ---
     // For each top player, get their rating 1 hour ago (ratingAfter of last attempt before cutoff)
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
     const hourAgoRatings = await prisma.$queryRaw<
       { playerId: string; ratingAfter: number }[]
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
       SELECT DISTINCT ON ("playerId") "playerId", "ratingAfter"
       FROM "Attempt"
       WHERE "playerId" = ANY(${topIds})
-        AND "createdAt" < ${oneHourAgo}
+        AND "createdAt" < ${oneDayAgo}
       ORDER BY "playerId", "createdAt" DESC
     `;
 
@@ -64,7 +64,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
       SELECT DISTINCT "playerId"
       FROM "Attempt"
       WHERE "playerId" = ANY(${topIds})
-        AND "createdAt" >= ${oneHourAgo}
+        AND "createdAt" >= ${oneDayAgo}
     `;
     const hasRecentActivity = new Set(recentAttempts.map((r) => r.playerId));
 
