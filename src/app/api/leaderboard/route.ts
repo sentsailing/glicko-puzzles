@@ -11,7 +11,7 @@ const LEADERBOARD_LIMIT = 25;
  * GET /api/leaderboard
  *
  * Returns top 25 ranked players (authenticated, with username, 1+ games).
- * Includes daily rank changes and closest rival for the requesting player.
+ * Includes hourly rating changes and closest rival for the requesting player.
  */
 export async function GET(request: NextRequest): Promise<NextResponse<ApiResponse<LeaderboardResponse>>> {
   try {
@@ -20,7 +20,6 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
 
     const { player: requestingPlayer } = await resolvePlayer(request);
 
-    // All ranked players (needed for rank change computation + rival lookup)
     const rankedWhere = {
       firebaseUid: { not: null as string | null },
       username: { not: null as string | null },
@@ -41,61 +40,63 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
     });
 
     const totalRanked = allRanked.length;
+    const top = allRanked.slice(0, LEADERBOARD_LIMIT);
+    const topIds = top.map((p) => p.id);
 
-    // --- Daily rank changes ---
-    // Get each ranked player's rating ~24h ago by finding their last attempt
-    // before the cutoff, or falling back to their current rating (no change).
-    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    // --- Hourly rating changes ---
+    // For each top player, get their rating 1 hour ago (ratingAfter of last attempt before cutoff)
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
 
-    // For all ranked player IDs, get the last attempt before 24h ago
-    const rankedIds = allRanked.map((p) => p.id);
-
-    // Raw query: for each player, get ratingAfter from their most recent attempt before 24h ago
-    const yesterdayRatings = await prisma.$queryRaw<
+    const hourAgoRatings = await prisma.$queryRaw<
       { playerId: string; ratingAfter: number }[]
     >`
       SELECT DISTINCT ON ("playerId") "playerId", "ratingAfter"
       FROM "Attempt"
-      WHERE "playerId" = ANY(${rankedIds})
-        AND "createdAt" < ${oneDayAgo}
+      WHERE "playerId" = ANY(${topIds})
+        AND "createdAt" < ${oneHourAgo}
       ORDER BY "playerId", "createdAt" DESC
     `;
 
-    const yesterdayRatingMap = new Map<string, number>();
-    for (const row of yesterdayRatings) {
-      yesterdayRatingMap.set(row.playerId, row.ratingAfter);
+    // Also check if each player has ANY attempts in the last hour
+    const recentAttempts = await prisma.$queryRaw<
+      { playerId: string }[]
+    >`
+      SELECT DISTINCT "playerId"
+      FROM "Attempt"
+      WHERE "playerId" = ANY(${topIds})
+        AND "createdAt" >= ${oneHourAgo}
+    `;
+    const hasRecentActivity = new Set(recentAttempts.map((r) => r.playerId));
+
+    const hourAgoMap = new Map<string, number>();
+    for (const row of hourAgoRatings) {
+      hourAgoMap.set(row.playerId, row.ratingAfter);
     }
 
-    // Build yesterday's ranking: use yesterday's rating if available, else current (player is new today)
-    const yesterdayRanking = allRanked
-      .map((p) => ({
-        id: p.id,
-        rating: yesterdayRatingMap.get(p.id) ?? p.rating,
-      }))
-      .sort((a, b) => b.rating - a.rating);
-
-    const yesterdayRankMap = new Map<string, number>();
-    yesterdayRanking.forEach((p, i) => {
-      yesterdayRankMap.set(p.id, i + 1);
-    });
-
-    // Build leaderboard with rank changes
-    const top = allRanked.slice(0, LEADERBOARD_LIMIT);
     const leaderboard = top.map((p, i) => {
-      const currentRank = i + 1;
-      const prevRank = yesterdayRankMap.get(p.id);
-      // If player had no attempts before 24h ago, they're new — show null
-      const isNew = !yesterdayRatingMap.has(p.id);
-      const rankChange = isNew ? null : (prevRank! - currentRank);
+      let ratingChange: number | null = null;
+
+      if (hasRecentActivity.has(p.id)) {
+        // Player was active in the last hour
+        const prevRating = hourAgoMap.get(p.id);
+        if (prevRating != null) {
+          ratingChange = Math.round(p.rating - prevRating);
+        } else {
+          // All their attempts are within the last hour (brand new player)
+          // Show change from default 1200
+          ratingChange = Math.round(p.rating - 1200);
+        }
+      }
+      // If no recent activity, ratingChange stays null (nothing to show)
 
       return {
-        rank: currentRank,
+        rank: i + 1,
         username: p.username!,
         displayName: p.displayName,
         rating: p.rating,
         confirmedTier: p.confirmedTier,
         gamesPlayed: p.gamesPlayed,
-        rankChange,
+        ratingChange,
       };
     });
 
@@ -112,7 +113,6 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
       if (playerIdx >= 0) {
         playerRank = playerIdx + 1;
 
-        // The player directly above on the leaderboard
         if (playerIdx > 0) {
           const rival = allRanked[playerIdx - 1];
           closestRival = {

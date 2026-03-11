@@ -164,7 +164,7 @@ export interface LeaderboardEntry {
   rating: number;
   confirmedTier: string;
   gamesPlayed: number;
-  rankChange: number | null; // positive = climbed, negative = dropped, null = new
+  ratingChange: number | null; // rating delta in the last hour, null = no activity
 }
 
 export interface ClosestRival {

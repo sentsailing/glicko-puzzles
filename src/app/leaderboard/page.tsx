@@ -46,25 +46,6 @@ const MEDAL_USERNAME_STYLES: React.CSSProperties[] = [
   { background: "linear-gradient(135deg, #ea580c, #c2410c, #fb923c)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", filter: "drop-shadow(0 0 6px rgba(234, 88, 12, 0.5))" }, // bronze
 ];
 
-function RankChangeIndicator({ change }: { change: number | null }) {
-  if (change === null) {
-    return <span className="text-[10px] font-medium text-[var(--accent)] tabular-nums">NEW</span>;
-  }
-  if (change === 0) return null;
-  const up = change > 0;
-  return (
-    <span className={`text-[10px] font-bold tabular-nums flex items-center gap-0.5 ${up ? "text-[var(--success)]" : "text-[var(--error)]"}`}>
-      <svg className="w-2.5 h-2.5" viewBox="0 0 10 10" fill="currentColor">
-        {up
-          ? <path d="M5 1L9 6H1Z" />
-          : <path d="M5 9L1 4H9Z" />
-        }
-      </svg>
-      {Math.abs(change)}
-    </span>
-  );
-}
-
 function LeaderboardRow({
   entry,
   isCurrentPlayer,
@@ -74,18 +55,19 @@ function LeaderboardRow({
 }) {
   const tier = getTierByName(entry.confirmedTier);
   const isMedal = entry.rank <= 3;
+  const rc = entry.ratingChange;
 
   return (
     <div
-      className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors relative ${
+      className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
         isCurrentPlayer
           ? `${tier.bg} ${tier.border} border`
           : "hover:bg-[var(--border)]/20"
       }`}
       style={{ borderLeft: `3px solid ${isMedal ? MEDAL_FILL[entry.rank - 1].inner : tier.hex}` }}
     >
-      {/* Rank + change */}
-      <div className="w-10 flex flex-col items-center flex-shrink-0">
+      {/* Rank */}
+      <div className="w-8 flex items-center justify-center flex-shrink-0">
         {isMedal ? (
           <MedalIcon rank={entry.rank as 1 | 2 | 3} />
         ) : (
@@ -93,7 +75,6 @@ function LeaderboardRow({
             {entry.rank}
           </span>
         )}
-        <RankChangeIndicator change={entry.rankChange} />
       </div>
 
       {/* Player info */}
@@ -109,7 +90,7 @@ function LeaderboardRow({
         </span>
       </div>
 
-      {/* Rating + Tier icon (grouped together) */}
+      {/* Rating + Tier icon */}
       <div className="flex items-center gap-1.5 flex-shrink-0">
         <div
           className={`${isMedal ? "" : tier.color} tier-icon-glow`}
@@ -131,10 +112,27 @@ function LeaderboardRow({
         </span>
       </div>
 
+      {/* Hourly rating change */}
+      <div className="w-14 text-right flex-shrink-0">
+        {rc != null && rc !== 0 ? (
+          <span className={`text-xs font-bold tabular-nums flex items-center justify-end gap-0.5 ${rc > 0 ? "text-[var(--success)]" : "text-[var(--error)]"}`}>
+            <svg className="w-2.5 h-2.5" viewBox="0 0 10 10" fill="currentColor">
+              {rc > 0
+                ? <path d="M5 1L9 6H1Z" />
+                : <path d="M5 9L1 4H9Z" />
+              }
+            </svg>
+            {rc > 0 ? "+" : ""}{rc}
+          </span>
+        ) : (
+          <span className="text-xs text-[var(--muted)]/40 tabular-nums">&mdash;</span>
+        )}
+      </div>
+
       {/* Games */}
-      <div className="w-20 text-right flex-shrink-0 hidden sm:block">
+      <div className="w-16 text-right flex-shrink-0 hidden sm:block">
         <span className="text-xs text-[var(--muted)] tabular-nums">
-          {entry.gamesPlayed} games
+          {entry.gamesPlayed}
         </span>
       </div>
 
@@ -241,7 +239,7 @@ export default function LeaderboardPage() {
           >
             {/* Header row */}
             <div className="flex items-center gap-3 px-4 py-2.5 border-b border-[var(--border)] bg-[var(--border)]/20">
-              <div className="w-10 text-center flex-shrink-0">
+              <div className="w-8 text-center flex-shrink-0">
                 <span className="text-[10px] font-medium text-[var(--muted)] uppercase tracking-wider">#</span>
               </div>
               <div className="flex-1">
@@ -250,7 +248,10 @@ export default function LeaderboardPage() {
               <div className="flex-shrink-0">
                 <span className="text-[10px] font-medium text-[var(--muted)] uppercase tracking-wider">Rating</span>
               </div>
-              <div className="w-20 text-right flex-shrink-0 hidden sm:block">
+              <div className="w-14 text-right flex-shrink-0">
+                <span className="text-[10px] font-medium text-[var(--muted)] uppercase tracking-wider">1h</span>
+              </div>
+              <div className="w-16 text-right flex-shrink-0 hidden sm:block">
                 <span className="text-[10px] font-medium text-[var(--muted)] uppercase tracking-wider">Games</span>
               </div>
             </div>
